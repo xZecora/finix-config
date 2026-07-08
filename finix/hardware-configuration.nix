@@ -63,11 +63,10 @@
       device = "192.168.0.231:/export/alt_anime";
       fsType = "nfs";
       options = [
-        "rw"
+        "defaults"
         "_netdev"
         "hard"
-        "auto"
-        "async"
+        "noauto"
       ];
     };
 
@@ -78,6 +77,7 @@
         "defaults"
         "_netdev"
         "hard"
+        "noauto"
       ];
     };
 
@@ -88,6 +88,7 @@
         "defaults"
         "_netdev"
         "hard"
+        "noauto"
       ];
     };
 
@@ -98,6 +99,7 @@
         "defaults"
         "_netdev"
         "hard"
+        "noauto"
       ];
     };
 
@@ -108,6 +110,7 @@
         "defaults"
         "_netdev"
         "hard"
+        "noauto"
       ];
     };
 
@@ -118,6 +121,7 @@
         "defaults"
         "_netdev"
         "hard"
+        "noauto"
       ];
     };
 
@@ -128,6 +132,7 @@
         "defaults"
         "_netdev"
         "hard"
+        "noauto"
       ];
     };
 
@@ -138,6 +143,7 @@
         "defaults"
         "_netdev"
         "hard"
+        "noauto"
       ];
     };
 
@@ -148,6 +154,7 @@
         "defaults"
         "_netdev"
         "hard"
+        "noauto"
       ];
     };
 
@@ -158,6 +165,7 @@
         "defaults"
         "_netdev"
         "hard"
+        "noauto"
       ];
     };
   };
