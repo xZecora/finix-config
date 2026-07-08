@@ -42,7 +42,7 @@
 
   # environment.etc.foo.text = "bar";
 
-  hardware.cpu.amd.updateMicrocode = true;
+  # hardware.cpu.amd.updateMicrocode = true;
 
   finit = {
     runlevel = 3;
@@ -147,14 +147,14 @@
 
   };
 
-  providers.privileges.rules = [
-    {
-      command = "*";
-      users = [ "vitrial" ];
-      requirePassword = false;
-      keepEnv = true;
-    }
-  ];
+  # providers.privileges.rules = [
+  #   {
+  #     command = "*";
+  #     users = [ "vitrial" ];
+  #     requirePassword = false;
+  #     keepEnv = true;
+  #   }
+  # ];
 
   networking = {
     hostName = "finix"; # Define your hostname.
