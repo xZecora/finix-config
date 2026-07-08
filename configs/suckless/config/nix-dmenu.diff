@@ -1,0 +1,205 @@
+diff --git a/config.mk b/config.mk
+index c2aede8..9ae6232 100644
+--- a/config.mk
++++ b/config.mk
+@@ -23,7 +23,7 @@ FREETYPEINC = /usr/include/freetype2
+ #EXTRAFLAGS=-D_GNU_SOURCE
+ 
+ # Uncomment for the alpha patch / ALPHA_PATCH
+-#XRENDER = -lXrender
++XRENDER = -lXrender
+ 
+ # Uncomment for the bidi patch / BIDI_PATCH
+ #BIDILIBS = `pkg-config --libs fribidi`
+diff --git a/dmenu.c b/dmenu.c
+index 6745174..20c0634 100644
+--- a/dmenu.c
++++ b/dmenu.c
+@@ -1031,6 +1031,8 @@ insert(const char *str, ssize_t n)
+ static size_t
+ nextrune(int inc)
+ {
++  if (text[0] == '\0')
++    return 0;
+ 	ssize_t n;
+ 
+ 	/* return location of next utf8 rune in the given direction (+1 or -1) */
+diff --git a/patch/vi_mode.c b/patch/vi_mode.c
+index 438c0df..9d8f440 100644
+--- a/patch/vi_mode.c
++++ b/patch/vi_mode.c
+@@ -48,7 +48,7 @@ vi_keypress(KeySym ksym, const XKeyEvent *ev)
+ 	case XK_b:
+ 		movewordedge(-1);
+ 		break;
+-	case XK_e:
++	case XK_f:
+ 		cursor = nextrune(+1);
+ 		movewordedge(+1);
+ 		if (text[cursor] == '\0')
+@@ -75,23 +75,23 @@ vi_keypress(KeySym ksym, const XKeyEvent *ev)
+ 		}
+ 		sel = matchend;
+ 		break;
+-	case XK_h:
++	case XK_n:
+ 		if (cursor)
+ 			cursor = nextrune(-1);
+ 		break;
+-	case XK_j:
++	case XK_e:
+ 		if (sel && sel->right && (sel = sel->right) == next) {
+ 			curr = next;
+ 			calcoffsets();
+ 		}
+ 		break;
+-	case XK_k:
++	case XK_i:
+ 		if (sel && sel->left && (sel = sel->left)->right == curr) {
+ 			curr = prev;
+ 			calcoffsets();
+ 		}
+ 		break;
+-	case XK_l:
++	case XK_o:
+ 		if (text[cursor] != '\0' && text[cursor + 1] != '\0')
+ 			cursor = nextrune(+1);
+ 		else if (text[cursor] == '\0' && cursor)
+@@ -108,7 +108,7 @@ vi_keypress(KeySym ksym, const XKeyEvent *ev)
+ 	case XK_a:
+ 		cursor = nextrune(+1);
+ 		/* fallthrough */
+-	case XK_i:
++	case XK_u:
+ 		using_vi_mode = 0;
+ 		break;
+ 	case XK_A:
+@@ -116,7 +116,7 @@ vi_keypress(KeySym ksym, const XKeyEvent *ev)
+ 			cursor = strlen(text);
+ 		using_vi_mode = 0;
+ 		break;
+-	case XK_I:
++	case XK_U:
+ 		cursor = using_vi_mode = 0;
+ 		break;
+ 	case XK_p:
+diff --git a/patches.def.h b/patches.def.h
+index 8b7a919..2b556c1 100644
+--- a/patches.def.h
++++ b/patches.def.h
+@@ -5,7 +5,7 @@
+  * when including this patch.
+  * https://github.com/bakkeby/patches/blob/master/dmenu/dmenu-alpha-5.0_20210725_523aa08.diff
+  */
+-#define ALPHA_PATCH 0
++#define ALPHA_PATCH 1
+ 
+ /* This adds padding for dmenu in similar fashion to the similarly named patch for dwm. The idea
+  * is to have dmenu appear on top of the bar when using said patch in dwm.
+@@ -29,7 +29,7 @@
+  * or xyw patches, to make the menu stand out from similarly coloured windows.
+  * http://tools.suckless.org/dmenu/patches/border/
+  */
+-#define BORDER_PATCH 0
++#define BORDER_PATCH 1
+ 
+ /* The caret scheme patch, a.k.a. colored caret patch, adds the option to change the color
+  * of the caret via the SchemeCaret color scheme.
+@@ -48,17 +48,17 @@
+  * case-insensitive -i option with a case sensitive -s option.
+  * http://tools.suckless.org/dmenu/patches/case-insensitive/
+  */
+-#define CASEINSENSITIVE_PATCH 0
++#define CASEINSENSITIVE_PATCH 1
+ 
+ /* This patch centers dmenu in the middle of the screen.
+  * https://tools.suckless.org/dmenu/patches/center/
+  */
+-#define CENTER_PATCH 0
++#define CENTER_PATCH 1
+ 
+ /* Minor patch to enable the use of Ctrl+v (XA_PRIMARY) and Ctrl+Shift+v (CLIPBOARD) to paste.
+  * By default dmenu only supports Ctrl+y and Ctrl+Shift+y to paste.
+  */
+-#define CTRL_V_TO_PASTE_PATCH 0
++#define CTRL_V_TO_PASTE_PATCH 1
+ 
+ /* This patch dyamically changes the size of the dmenu window based on how many items are
+  * drawn in a vertical view. For this to work set a higher maximum of lines, e.g. -l 500.
+@@ -80,19 +80,19 @@
+  * line height patch and as such is intended to be combined with these.
+  * https://tools.suckless.org/dmenu/patches/emoji-highlight/
+  */
+-#define EMOJI_HIGHLIGHT_PATCH 0
++#define EMOJI_HIGHLIGHT_PATCH 1
+ 
+ /* This patch adds support for fuzzy-matching to dmenu, allowing users to type non-consecutive
+  * portions of the string to be matched.
+  * https://tools.suckless.org/dmenu/patches/fuzzymatch/
+  */
+-#define FUZZYMATCH_PATCH 0
++#define FUZZYMATCH_PATCH 1
+ 
+ /* Adds fzf-like functionality for dmenu.
+  * Refer to https://github.com/DAFF0D11/dafmenu/ for documentation and example use cases.
+  * https://github.com/DAFF0D11/dafmenu/blob/master/patches/dmenu-fzfexpect-5.1.diff
+  */
+-#define FZFEXPECT_PATCH 0
++#define FZFEXPECT_PATCH 1
+ 
+ /* Allows dmenu's entries to be rendered in a grid by adding a new -g flag to specify
+  * the number of grid columns. The -g and -l options can be used together to create a
+@@ -116,7 +116,7 @@
+  * https://tools.suckless.org/dmenu/patches/highlight/
+  * https://tools.suckless.org/dmenu/patches/fuzzyhighlight/
+  */
+-#define HIGHLIGHT_PATCH 0
++#define HIGHLIGHT_PATCH 1
+ 
+ /* This will automatically sort the search result so that high priority items are shown first.
+  * https://tools.suckless.org/dmenu/patches/highpriority/
+@@ -126,7 +126,7 @@
+ /* This patch causes dmenu to print out the current text each time a key is pressed.
+  * https://tools.suckless.org/dmenu/patches/incremental/
+  */
+-#define INCREMENTAL_PATCH 0
++#define INCREMENTAL_PATCH 1
+ 
+ /* This patch adds an option to provide preselected text.
+  * https://tools.suckless.org/dmenu/patches/initialtext/
+@@ -149,7 +149,7 @@
+  * integrate dmenu with other UI elements that require a particular vertical size.
+  * http://tools.suckless.org/dmenu/patches/line-height/
+  */
+-#define LINE_HEIGHT_PATCH 0
++#define LINE_HEIGHT_PATCH 1
+ 
+ /* This patch adds a -wm flag which sets override_redirect to false; thus letting your window
+  * manager manage the dmenu window.
+@@ -377,7 +377,7 @@
+  *
+  * https://tools.suckless.org/dmenu/patches/vi-mode/
+  */
+-#define VI_MODE_PATCH 0
++#define VI_MODE_PATCH 1
+ 
+ /* This patch adds an optional value to the -vi command line option introduced by the
+  * vi mode patch.
+@@ -389,7 +389,7 @@
+  *
+  * This patch is made by https://github.com/nimaaskarian
+  */
+-#define VI_MODE_RUNTIME_STARTING_MODE_PATCH 0
++#define VI_MODE_RUNTIME_STARTING_MODE_PATCH 1
+ 
+ /* Adds extended window manager hints such as _NET_WM_WINDOW_TYPE and _NET_WM_WINDOW_TYPE_DOCK.
+  * https://github.com/Baitinq/dmenu/blob/master/patches/dmenu-wm_type.diff
+@@ -408,7 +408,7 @@
+  *
+  * https://tools.suckless.org/dmenu/patches/xresources/
+  */
+-#define XRESOURCES_PATCH 0
++#define XRESOURCES_PATCH 1
+ 
+ /* This patch adds options for specifying dmenu window position and width.
+  * The center patch takes precedence over the XYW patch if enabled.

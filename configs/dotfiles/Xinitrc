@@ -1,0 +1,13 @@
+#!/usr/bin/env dash
+export wallpapers=/home/vitrial/.local/share/wallpapers
+xrdb ~/.config/Xresources
+/home/vitrial/.local/bin/monitor-layout
+feh --bg-fill "${wallpapers}/gruvbox/gruvbox-rainbow-nix.png" "${wallpapers}/gruvbox/know-your-way.png" "${wallpapers}/gruvbox/tux.png"
+
+exec picom &
+
+case "$1" in
+#  *) exec dbus-launch --exit-with-session /home/vitrial/.local/bin/custom_binaries/ratpoison/ratpoison -f /home/vitrial/.config/ratpoison/ratpoisonrc;;
+#  *) exec dbus-launch --exit-with-session /home/vitrial/.local/src/rat/ratpoison-1.4.9/src/ratpoison -f /home/vitrial/.config/ratpoison/ratpoisonrc;;
+*) exec ratpoison -f /home/vitrial/.config/ratpoison/ratpoisonrc ;;
+esac

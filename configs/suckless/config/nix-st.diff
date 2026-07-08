@@ -1,0 +1,2830 @@
+diff --git a/Makefile b/Makefile
+index 15db421..dfcea0f 100644
+--- a/Makefile
++++ b/Makefile
+@@ -4,7 +4,7 @@
+ 
+ include config.mk
+ 
+-SRC = st.c x.c
++SRC = st.c x.c hb.c
+ OBJ = $(SRC:.c=.o)
+ 
+ all: st
+@@ -16,7 +16,8 @@ config.h:
+ 	$(CC) $(STCFLAGS) -c $<
+ 
+ st.o: config.h st.h win.h
+-x.o: arg.h config.h st.h win.h
++x.o: arg.h config.h st.h win.h hb.h
++hb.o: st.h
+ 
+ $(OBJ): config.h config.mk
+ 
+diff --git a/README b/README
+index 6a846ed..d6d50f1 100644
+--- a/README
++++ b/README
+@@ -32,3 +32,14 @@ Credits
+ -------
+ Based on Aurélien APTEL <aurelien dot aptel at gmail dot com> bt source code.
+ 
++Included Patches
++-------
++- Scrollback Reflow Standalone Extended
++- Ligatures
++- Font2
++- delkey
++- anysize
++- Xresources
++- Relative border
++- Undercurl
++- Dynamic Cursor
+diff --git a/config.def.h b/config.def.h
+index 2cd740a..6f36d92 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -4,9 +4,16 @@
+  * appearance
+  *
+  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
++ * borderperc: percentage of cell width to use as a border
++ *		0 = no border, 100 = border width is same as cell width
+  */
+-static char *font = "Liberation Mono:pixelsize=12:antialias=true:autohint=true";
+-static int borderpx = 2;
++static char *font = "FiraCode Nerd Font Mono:pixelsize=15:antialias=true:autohint=true";
++/* Spare fonts */
++static char *font2[] = {
++                    "Noto Color Emoji:pixelsize=15:antialias=true:autohint=true"
++};
++
++static int borderperc = 20;
+ 
+ /*
+  * What program is execed by st depends of these precedence rules:
+@@ -45,7 +52,7 @@ int allowaltscreen = 1;
+ 
+ /* allow certain non-interactive (insecure) window operations such as:
+    setting the clipboard text */
+-int allowwindowops = 0;
++int allowwindowops = 1;
+ 
+ /*
+  * draw latency range in ms - from new content/keypress/etc until drawing.
+@@ -91,7 +98,10 @@ char *termname = "st-256color";
+  *
+  *	stty tabs
+  */
+-unsigned int tabspaces = 8;
++unsigned int tabspaces = 2;
++
++/* bg opacity */
++float alpha = 0.8;
+ 
+ /* Terminal colors (16 first used in escape sequence) */
+ static const char *colorname[] = {
+@@ -170,6 +180,42 @@ static unsigned int defaultattr = 11;
+  */
+ static uint forcemousemod = ShiftMask;
+ 
++/*
++ * Xresources preferences to load at startup
++ */
++ResourcePref resources[] = {
++		{ "font",         STRING,  &font },
++		{ "color0",       STRING,  &colorname[0] },
++		{ "color1",       STRING,  &colorname[1] },
++		{ "color2",       STRING,  &colorname[2] },
++		{ "color3",       STRING,  &colorname[3] },
++		{ "color4",       STRING,  &colorname[4] },
++		{ "color5",       STRING,  &colorname[5] },
++		{ "color6",       STRING,  &colorname[6] },
++		{ "color7",       STRING,  &colorname[7] },
++		{ "color8",       STRING,  &colorname[8] },
++		{ "color9",       STRING,  &colorname[9] },
++		{ "color10",      STRING,  &colorname[10] },
++		{ "color11",      STRING,  &colorname[11] },
++		{ "color12",      STRING,  &colorname[12] },
++		{ "color13",      STRING,  &colorname[13] },
++		{ "color14",      STRING,  &colorname[14] },
++		{ "color15",      STRING,  &colorname[15] },
++		{ "background",   STRING,  &colorname[259] },
++		{ "foreground",   STRING,  &colorname[258] },
++		{ "cursorColor",  STRING,  &colorname[256] },
++		{ "termname",     STRING,  &termname },
++		{ "shell",        STRING,  &shell },
++		{ "minlatency",   INTEGER, &minlatency },
++		{ "maxlatency",   INTEGER, &maxlatency },
++		{ "blinktimeout", INTEGER, &blinktimeout },
++		{ "bellvolume",   INTEGER, &bellvolume },
++		{ "tabspaces",    INTEGER, &tabspaces },
++		{ "borderpx",     INTEGER, &borderpx },
++		{ "cwscale",      FLOAT,   &cwscale },
++		{ "chscale",      FLOAT,   &chscale },
++};
++
+ /*
+  * Internal mouse shortcuts.
+  * Beware that overloading Button1 will disable the selection.
+@@ -192,9 +238,13 @@ static Shortcut shortcuts[] = {
+ 	{ XK_ANY_MOD,           XK_Break,       sendbreak,      {.i =  0} },
+ 	{ ControlMask,          XK_Print,       toggleprinter,  {.i =  0} },
+ 	{ ShiftMask,            XK_Print,       printscreen,    {.i =  0} },
++	{ ShiftMask,            XK_Page_Up,     kscrollup,      {.i = -1} },
++	{ ShiftMask,            XK_Page_Down,   kscrolldown,    {.i = -1} },
++	{ ShiftMask,            XK_Home,        kscrollup,      {.i = 1000000} },
++	{ ShiftMask,            XK_End,         kscrolldown,    {.i = 1000000} },
+ 	{ XK_ANY_MOD,           XK_Print,       printsel,       {.i =  0} },
+-	{ TERMMOD,              XK_Prior,       zoom,           {.f = +1} },
+-	{ TERMMOD,              XK_Next,        zoom,           {.f = -1} },
++	{ TERMMOD,              XK_I,           zoom,           {.f = +1} },
++	{ TERMMOD,              XK_E,           zoom,           {.f = -1} },
+ 	{ TERMMOD,              XK_Home,        zoomreset,      {.f =  0} },
+ 	{ TERMMOD,              XK_C,           clipcopy,       {.i =  0} },
+ 	{ TERMMOD,              XK_V,           clippaste,      {.i =  0} },
+@@ -278,7 +328,7 @@ static Key key[] = {
+ 	{ XK_KP_Delete,     ControlMask,    "\033[3;5~",    +1,    0},
+ 	{ XK_KP_Delete,     ShiftMask,      "\033[2K",      -1,    0},
+ 	{ XK_KP_Delete,     ShiftMask,      "\033[3;2~",    +1,    0},
+-	{ XK_KP_Delete,     XK_ANY_MOD,     "\033[P",       -1,    0},
++	{ XK_KP_Delete,     XK_ANY_MOD,     "\033[3~",       -1,    0},
+ 	{ XK_KP_Delete,     XK_ANY_MOD,     "\033[3~",      +1,    0},
+ 	{ XK_KP_Multiply,   XK_ANY_MOD,     "\033Oj",       +2,    0},
+ 	{ XK_KP_Add,        XK_ANY_MOD,     "\033Ok",       +2,    0},
+@@ -346,7 +396,7 @@ static Key key[] = {
+ 	{ XK_Delete,        ControlMask,    "\033[3;5~",    +1,    0},
+ 	{ XK_Delete,        ShiftMask,      "\033[2K",      -1,    0},
+ 	{ XK_Delete,        ShiftMask,      "\033[3;2~",    +1,    0},
+-	{ XK_Delete,        XK_ANY_MOD,     "\033[P",       -1,    0},
++	{ XK_Delete,        XK_ANY_MOD,     "\033[3~",       -1,    0},
+ 	{ XK_Delete,        XK_ANY_MOD,     "\033[3~",      +1,    0},
+ 	{ XK_BackSpace,     XK_NO_MOD,      "\177",          0,    0},
+ 	{ XK_BackSpace,     Mod1Mask,       "\033\177",      0,    0},
+@@ -472,3 +522,33 @@ static char ascii_printable[] =
+ 	" !\"#$%&'()*+,-./0123456789:;<=>?"
+ 	"@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"
+ 	"`abcdefghijklmnopqrstuvwxyz{|}~";
++
++
++/**
++ * Undercurl style. Set UNDERCURL_STYLE to one of the available styles.
++ *
++ * Curly: Dunno how to draw it *shrug*
++ *  _   _   _   _
++ * ( ) ( ) ( ) ( )
++ *	 (_) (_) (_) (_)
++ *
++ * Spiky:
++ * /\  /\   /\	/\
++ *   \/  \/	  \/
++ *
++ * Capped:
++*	_     _     _
++ * / \   / \   / \
++ *    \_/   \_/
++*/
++// Available styles
++#define UNDERCURL_CURLY 0
++#define UNDERCURL_SPIKY 1
++#define UNDERCURL_CAPPED 2
++// Active style
++#define UNDERCURL_STYLE UNDERCURL_SPIKY
++
++/*
++ * The amount of lines scrollback can hold before it wraps around.
++ */
++unsigned int scrollback_lines = 5000;
+diff --git a/config.mk b/config.mk
+index 2fc854e..ec69d1a 100644
+--- a/config.mk
++++ b/config.mk
+@@ -15,10 +15,12 @@ PKG_CONFIG = pkg-config
+ # includes and libs
+ INCS = -I$(X11INC) \
+        `$(PKG_CONFIG) --cflags fontconfig` \
+-       `$(PKG_CONFIG) --cflags freetype2`
++       `$(PKG_CONFIG) --cflags freetype2` \
++       `$(PKG_CONFIG) --cflags harfbuzz`
+ LIBS = -L$(X11LIB) -lm -lrt -lX11 -lutil -lXft \
+        `$(PKG_CONFIG) --libs fontconfig` \
+-       `$(PKG_CONFIG) --libs freetype2`
++       `$(PKG_CONFIG) --libs freetype2` \
++       `$(PKG_CONFIG) --libs harfbuzz`
+ 
+ # flags
+ STCPPFLAGS = -DVERSION=\"$(VERSION)\" -D_XOPEN_SOURCE=600
+@@ -29,7 +31,8 @@ STLDFLAGS = $(LIBS) $(LDFLAGS)
+ #CPPFLAGS = -DVERSION=\"$(VERSION)\" -D_XOPEN_SOURCE=600 -D_BSD_SOURCE
+ #LIBS = -L$(X11LIB) -lm -lX11 -lutil -lXft \
+ #       `$(PKG_CONFIG) --libs fontconfig` \
+-#       `$(PKG_CONFIG) --libs freetype2`
++#       `$(PKG_CONFIG) --libs freetype2` \
++#       `$(PKG_CONFIG) --libs harfbuzz`
+ #MANPREFIX = ${PREFIX}/man
+ 
+ # compiler and linker
+diff --git a/hb.c b/hb.c
+new file mode 100644
+index e69de29..99412c8 100644
+--- /dev/null
++++ b/hb.c
+@@ -0,0 +1,125 @@
++#include <stdlib.h>
++#include <stdio.h>
++#include <math.h>
++#include <X11/Xft/Xft.h>
++#include <X11/cursorfont.h>
++#include <hb.h>
++#include <hb-ft.h>
++
++#include "st.h"
++#include "hb.h"
++
++#define FEATURE(c1,c2,c3,c4) { .tag = HB_TAG(c1,c2,c3,c4), .value = 1, .start = HB_FEATURE_GLOBAL_START, .end = HB_FEATURE_GLOBAL_END }
++#define BUFFER_STEP 256
++
++hb_font_t *hbfindfont(XftFont *match);
++
++typedef struct {
++	XftFont *match;
++	hb_font_t *font;
++} HbFontMatch;
++
++typedef struct {
++	size_t capacity;
++	HbFontMatch *fonts;
++} HbFontCache;
++
++static HbFontCache hbfontcache = { 0, NULL };
++
++typedef struct {
++	size_t capacity;
++	Rune *runes;
++} RuneBuffer;
++
++static RuneBuffer hbrunebuffer = { 0, NULL };
++
++/*
++ * Poplulate the array with a list of font features, wrapped in FEATURE macro,
++ * e. g.
++ * FEATURE('c', 'a', 'l', 't'), FEATURE('d', 'l', 'i', 'g')
++ */
++hb_feature_t features[] = { };
++
++void
++hbunloadfonts()
++{
++	for (int i = 0; i < hbfontcache.capacity; i++) {
++		hb_font_destroy(hbfontcache.fonts[i].font);
++		XftUnlockFace(hbfontcache.fonts[i].match);
++	}
++
++	if (hbfontcache.fonts != NULL) {
++		free(hbfontcache.fonts);
++		hbfontcache.fonts = NULL;
++	}
++	hbfontcache.capacity = 0;
++}
++
++hb_font_t *
++hbfindfont(XftFont *match)
++{
++	for (int i = 0; i < hbfontcache.capacity; i++) {
++		if (hbfontcache.fonts[i].match == match)
++			return hbfontcache.fonts[i].font;
++	}
++
++	/* Font not found in cache, caching it now. */
++	hbfontcache.fonts = realloc(hbfontcache.fonts, sizeof(HbFontMatch) * (hbfontcache.capacity + 1));
++	FT_Face face = XftLockFace(match);
++	hb_font_t *font = hb_ft_font_create(face, NULL);
++	if (font == NULL)
++		die("Failed to load Harfbuzz font.");
++
++	hbfontcache.fonts[hbfontcache.capacity].match = match;
++	hbfontcache.fonts[hbfontcache.capacity].font = font;
++	hbfontcache.capacity += 1;
++
++	return font;
++}
++
++void hbtransform(HbTransformData *data, XftFont *xfont, const Glyph *glyphs, int start, int length) {
++	ushort mode = USHRT_MAX;
++	unsigned int glyph_count;
++	int rune_idx, glyph_idx, end = start + length;
++
++	hb_font_t *font = hbfindfont(xfont);
++	if (font == NULL)
++		return;
++
++	hb_buffer_t *buffer = hb_buffer_create();
++	hb_buffer_set_direction(buffer, HB_DIRECTION_LTR);
++	hb_buffer_set_cluster_level(buffer, HB_BUFFER_CLUSTER_LEVEL_MONOTONE_CHARACTERS);
++
++	/* Resize the buffer if required length is larger. */
++	if (hbrunebuffer.capacity < length) {
++		hbrunebuffer.capacity = (length / BUFFER_STEP + 1) * BUFFER_STEP;
++		hbrunebuffer.runes = realloc(hbrunebuffer.runes, hbrunebuffer.capacity * sizeof(Rune));
++	}
++
++	/* Fill buffer with codepoints. */
++	for (rune_idx = 0, glyph_idx = start; glyph_idx < end; glyph_idx++, rune_idx++) {
++		hbrunebuffer.runes[rune_idx] = glyphs[glyph_idx].u;
++		mode = glyphs[glyph_idx].mode;
++		if (mode & ATTR_WDUMMY)
++			hbrunebuffer.runes[rune_idx] = 0x0020;
++	}
++	hb_buffer_add_codepoints(buffer, hbrunebuffer.runes, length, 0, length);
++
++	/* Shape the segment. */
++	hb_shape(font, buffer, features, sizeof(features)/sizeof(hb_feature_t));
++
++	/* Get new glyph info. */
++	hb_glyph_info_t *info = hb_buffer_get_glyph_infos(buffer, &glyph_count);
++	hb_glyph_position_t *pos = hb_buffer_get_glyph_positions(buffer, &glyph_count);
++
++	/* Fill the output. */
++	data->buffer = buffer;
++	data->glyphs = info;
++	data->positions = pos;
++	data->count = glyph_count;
++}
++
++void hbcleanup(HbTransformData *data) {
++	hb_buffer_destroy(data->buffer);
++	memset(data, 0, sizeof(HbTransformData));
++}
+diff --git a/hb.h b/hb.h
+new file mode 100644
+index e69de29..96e808b 100644
+--- /dev/null
++++ b/hb.h
+@@ -0,0 +1,15 @@
++#include <X11/Xft/Xft.h>
++#include <hb.h>
++#include <hb-ft.h>
++
++typedef struct {
++	hb_buffer_t *buffer;
++	hb_glyph_info_t *glyphs;
++	hb_glyph_position_t *positions;
++	unsigned int count;
++} HbTransformData;
++
++void hbunloadfonts();
++void hbtransform(HbTransformData *, XftFont *, const Glyph *, int, int);
++void hbcleanup(HbTransformData *);
++
+diff --git a/st.c b/st.c
+index 6f40e35..2f39096 100644
+--- a/st.c
++++ b/st.c
+@@ -5,6 +5,7 @@
+ #include <limits.h>
+ #include <pwd.h>
+ #include <stdarg.h>
++#include <stdint.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+@@ -33,6 +34,7 @@
+ #define UTF_SIZ       4
+ #define ESC_BUF_SIZ   (128*UTF_SIZ)
+ #define ESC_ARG_SIZ   16
++#define CAR_PER_ARG   4
+ #define STR_BUF_SIZ   ESC_BUF_SIZ
+ #define STR_ARG_SIZ   ESC_ARG_SIZ
+ 
+@@ -139,6 +141,7 @@ typedef struct {
+ 	int arg[ESC_ARG_SIZ];
+ 	int narg;              /* nb of args */
+ 	char mode[2];
++	int carg[ESC_ARG_SIZ][CAR_PER_ARG]; /* colon args */
+ } CSIEscape;
+ 
+ /* STR Escape sequence structs */
+@@ -159,6 +162,7 @@ static void ttywriteraw(const char *, size_t);
+ 
+ static void csidump(void);
+ static void csihandle(void);
++static void readcolonargs(char **, int, int[][CAR_PER_ARG]);
+ static void csiparse(void);
+ static void csireset(void);
+ static void osc_color_response(int, int, int);
+@@ -178,7 +182,7 @@ static void tdeletechar(int);
+ static void tdeleteline(int);
+ static void tinsertblank(int);
+ static void tinsertblankline(int);
+-static int tlinelen(int);
++static int tlinelen(Line);
+ static void tmoveto(int, int);
+ static void tmoveato(int, int);
+ static void tnewline(int);
+@@ -232,6 +236,376 @@ static const uchar utfmask[UTF_SIZ + 1] = {0xC0, 0x80, 0xE0, 0xF0, 0xF8};
+ static const Rune utfmin[UTF_SIZ + 1] = {       0,    0,  0x80,  0x800,  0x10000};
+ static const Rune utfmax[UTF_SIZ + 1] = {0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0x10FFFF};
+ 
++typedef struct
++{
++	Line *buf;       /* ring of Line pointers */
++	int cap;         /* max number of lines */
++	int len;         /* current number of valid lines (<= cap) */
++	int head;        /* physical index of logical oldest (valid when len>0) */
++	uint64_t base;   /* Can overflow in the extreme */
++	/*
++	 * max_width tracks the widest line ever pushed to scrollback.
++	 * It may be conservative (stale) if that line has since been
++	 * evicted from the ring buffer, which is acceptable - it just
++	 * means we might reflow when not strictly necessary, which is
++	 * better than skipping a needed reflow.
++	 */
++	int max_width;
++	int view_offset; /* 0 means live screen */
++} Scrollback;
++
++static Scrollback sb;
++
++static int
++sb_phys_index(int logical_idx)
++{
++	/* logical_idx: 0..sb.len-1 (0 = oldest) */
++	return (sb.head + logical_idx) % sb.cap;
++}
++
++static Line
++lineclone(Line src)
++{
++	Line dst;
++
++	if (!src)
++		return NULL;
++
++	dst = xmalloc(term.col * sizeof(Glyph));
++	memcpy(dst, src, term.col * sizeof(Glyph));
++	return dst;
++}
++
++static void
++sb_init(int lines)
++{
++	int i;
++
++	sb.buf  = xmalloc(sizeof(Line) * lines);
++	sb.cap  = lines;
++	sb.len  = 0;
++	sb.head = 0;
++	sb.base = 0;
++	for (i = 0; i < sb.cap; i++)
++		sb.buf[i] = NULL;
++
++	sb.view_offset = 0;
++	sb.max_width = 0;
++}
++
++/* Push one screen line into scrollback.
++ * Overwrites oldest when full (ring buffer).
++ */
++static void
++sb_push(Line line)
++{
++	Line copy;
++	int tail;
++	int width;
++
++	if (sb.cap <= 0)
++		return;
++
++	copy = lineclone(line);
++
++	if (sb.len < sb.cap) {
++		tail = sb_phys_index(sb.len);
++		sb.buf[tail] = copy;
++		sb.len++;
++	} else {
++		/* We might've just evicted the widest line... */
++		free(sb.buf[sb.head]);
++		sb.buf[sb.head] = copy;
++		sb.head = (sb.head + 1) % sb.cap;
++		sb.base++;
++	}
++	width = tlinelen(copy);
++	/* ...so max_width might be stale. */
++	if (width > sb.max_width)
++		sb.max_width = width;
++}
++
++static Line
++sb_get(int idx)
++{
++	/* idx is logical: 0..sb.len-1 */
++	if (idx < 0 || idx >= sb.len)
++		return NULL;
++	return sb.buf[sb_phys_index(idx)];
++}
++
++static void
++sb_clear(void)
++{
++	int i;
++	int p;
++
++	if (!sb.buf)
++		return;
++
++	for (i = 0; i < sb.len; i++) {
++		p = sb_phys_index(i);
++		if (sb.buf[p]) {
++			free(sb.buf[p]);
++			sb.buf[p] = NULL;
++		}
++	}
++
++	sb.len = 0;
++	sb.head = 0;
++	sb.base = 0;
++	sb.view_offset = 0;
++	sb.max_width = 0;
++}
++
++/*
++ * Reflows the scrollback buffer to fit a new terminal width.
++ *
++ * The algorithm works in three steps:
++ * 1) Unwrap: It iterates through the existing history, joining physical lines
++ * marked with ATTR_WRAP into a single continuous 'logical' line.
++ * 2) Reflow: It slices this logical line into new chunks of size 'col'.
++ * - New wrap flags are applied where the text exceeds the new width.
++ * - Trailing spaces are trimmed to prevent ghost padding.
++ * 3) Rebuild: The new lines are pushed into a fresh ring buffer.
++ * - Uses O(1) ring insertion (updating head/tail) to avoid expensive
++ * memmoves during resize, but it is still O(N) where N is the existing
++ * history.
++ *
++ * Note: During reflow we reset sb to match the rebuilt buffer
++ * (head, base and len might change).
++ */
++static void
++sb_resize(int col)
++{
++	Line *new_buf;
++	int i, j;
++	int new_len, logical_cap, logical_len, is_wrapped, cursor;
++	int copy_width, tail, current_width;
++	Line logical, line, nl;
++	uint64_t new_base = 0;
++	int new_head = 0;
++	int new_max_width = 0;
++	Glyph *g;
++
++	new_len = 0;
++
++	if (sb.len == 0)
++		return;
++
++	new_buf = xmalloc(sizeof(Line) * sb.cap);
++	for (i = 0; i < sb.cap; i++)
++		new_buf[i] = NULL;
++
++	logical_cap = term.col * 2;
++	logical = xmalloc(logical_cap * sizeof(Glyph));
++	logical_len = 0;
++
++	for (i = 0; i < sb.len; i++) {
++		/* Unwrap: Accumulate physical lines into one logical line. */
++		line = sb_get(i);
++		is_wrapped = (line[term.col - 1].mode & ATTR_WRAP);
++		if (logical_len + term.col > logical_cap) {
++			logical_cap *= 2;
++			logical = xrealloc(logical, logical_cap * sizeof(Glyph));
++		}
++
++		memcpy(logical + logical_len, line, term.col * sizeof(Glyph));
++		for (j = 0; j < term.col; j++) {
++			logical[logical_len + j].mode &= ~ATTR_WRAP;
++		}
++		logical_len += term.col;
++		/* If the line was wrapped, continue accumulating before reflowing. */
++		if (is_wrapped) {
++			continue;
++		}
++		/* Trim trailing spaces from the fully unwrapped line. */
++		while (logical_len > 0) {
++			g = &logical[logical_len - 1];
++			if (g->u == ' ' && g->bg == defaultbg
++					&& (g->mode & ATTR_BOLD) == 0) {
++				logical_len--;
++			} else {
++				break;
++			}
++		}
++		if (logical_len == 0)
++			logical_len = 1;
++
++		/* Reflow: Split the logical line into new chunks. */
++		cursor = 0;
++		while (cursor < logical_len) {
++			nl = xmalloc(col * sizeof(Glyph));
++			for (j = 0; j < col; j++) {
++				nl[j].fg = defaultfg;
++				nl[j].bg = defaultbg;
++				nl[j].mode = 0;
++				nl[j].u = ' ';
++			}
++
++			copy_width = logical_len - cursor;
++			if (copy_width > col)
++				copy_width = col;
++
++			memcpy(nl, logical + cursor, copy_width * sizeof(Glyph));
++
++			for (j = 0; j < copy_width; j++) {
++				nl[j].mode &= ~ATTR_WRAP;
++			}
++
++			if (cursor + copy_width < logical_len) {
++				nl[col - 1].mode |= ATTR_WRAP;
++			} else {
++				nl[col - 1].mode &= ~ATTR_WRAP;
++			}
++
++			/* Rebuild: Push new lines into the ring buffer. */
++			if (new_len < sb.cap) {
++				tail = (new_head + new_len) % sb.cap;
++				new_buf[tail] = nl;
++				new_len++;
++			} else {
++				free(new_buf[new_head]);
++				new_buf[new_head] = nl;
++				new_head = (new_head + 1) % sb.cap;
++				new_base++;
++			}
++			current_width = (cursor + copy_width < logical_len) ? col : copy_width;
++			if (current_width > new_max_width)
++				new_max_width = current_width;
++			cursor += copy_width;
++		}
++		logical_len = 0;
++	}
++	free(logical);
++	sb_clear();
++	free(sb.buf);
++	sb.buf = new_buf;
++	sb.len = new_len;
++	sb.head = new_head;
++	sb.base = new_base;
++	sb.view_offset = 0;
++	sb.max_width = new_max_width;
++}
++
++static void
++sb_pop_screen(int loaded, int new_cols)
++{
++	int i, p;
++	int start_logical;
++	Line line;
++
++	loaded = MIN(loaded, sb.len);
++	start_logical = sb.len - loaded;
++	new_cols = MIN(new_cols, term.col);
++	for (i = 0; i < loaded; i++) {
++		p = sb_phys_index(start_logical + i);
++		line = sb.buf[p];
++
++		memcpy(term.line[i], line, new_cols * sizeof(Glyph));
++
++		free(line);
++		sb.buf[p] = NULL;
++	}
++
++	sb.len -= loaded;
++}
++
++static uint64_t
++sb_view_start(void)
++{
++	return sb.base + sb.len - sb.view_offset;
++}
++
++static void
++sb_view_changed(void)
++{
++	if (!term.dirty || term.row <= 0)
++		return;
++	tfulldirt();
++}
++
++static void
++selscrollback(int delta)
++{
++	if (delta == 0)
++		return;
++
++	if (sel.ob.x == -1 || sel.mode == SEL_EMPTY)
++		return;
++
++	if (sel.alt != IS_SET(MODE_ALTSCREEN))
++		return;
++
++	sel.nb.y += delta;
++	sel.ne.y += delta;
++	sel.ob.y += delta;
++	sel.oe.y += delta;
++
++	sb_view_changed();
++}
++
++static Line
++emptyline(void)
++{
++	static Line empty;
++	static int empty_cols;
++	int i = 0;
++
++	if (empty_cols != term.col) {
++		free(empty);
++		empty = xmalloc(term.col * sizeof(Glyph));
++		empty_cols = term.col;
++	}
++
++	for (i = 0; i < term.col; i++) {
++		empty[i] = term.c.attr;
++		empty[i].u = ' ';
++		empty[i].mode = 0;
++	}
++	return empty;
++}
++
++static Line
++renderline(int y)
++{
++	int start, v;
++
++	if (sb.view_offset <= 0)
++		return term.line[y];
++
++	start = sb.len - sb.view_offset; /* can be negative */
++	v = start + y;
++
++	if (v < 0)
++		return emptyline();
++
++	if (v < sb.len)
++		return sb_get(v);
++
++	/* past scrollback -> into current screen */
++	v -= sb.len;
++	if (v >= 0 && v < term.row)
++		return term.line[v];
++
++	return emptyline();
++}
++
++static void
++sb_reset_on_clear(void)
++{
++	sb_clear();
++	sb_view_changed();
++	if (sel.ob.x != -1 && term.row > 0)
++		selclear();
++}
++
++int
++tisaltscreen(void)
++{
++	return IS_SET(MODE_ALTSCREEN);
++}
++
+ ssize_t
+ xwrite(int fd, const char *s, size_t len)
+ {
+@@ -404,20 +778,23 @@ selinit(void)
+ 	sel.ob.x = -1;
+ }
+ 
+-int
+-tlinelen(int y)
++static int
++tlinelen(Line line)
+ {
+ 	int i = term.col;
+-
+-	if (term.line[y][i - 1].mode & ATTR_WRAP)
++	if (line[i - 1].mode & ATTR_WRAP)
+ 		return i;
+-
+-	while (i > 0 && term.line[y][i - 1].u == ' ')
++	while (i > 0 && line[i - 1].u == ' ')
+ 		--i;
+-
+ 	return i;
+ }
+ 
++static int
++tlinelen_render(int y)
++{
++	return tlinelen(renderline(y));
++}
++
+ void
+ selstart(int col, int row, int snap)
+ {
+@@ -485,10 +862,10 @@ selnormalize(void)
+ 	/* expand selection over line breaks */
+ 	if (sel.type == SEL_RECTANGULAR)
+ 		return;
+-	i = tlinelen(sel.nb.y);
++	i = tlinelen_render(sel.nb.y);
+ 	if (i < sel.nb.x)
+ 		sel.nb.x = i;
+-	if (tlinelen(sel.ne.y) <= sel.ne.x)
++	if (tlinelen_render(sel.ne.y) <= sel.ne.x)
+ 		sel.ne.x = term.col - 1;
+ }
+ 
+@@ -514,6 +891,7 @@ selsnap(int *x, int *y, int direction)
+ 	int newx, newy, xt, yt;
+ 	int delim, prevdelim;
+ 	const Glyph *gp, *prevgp;
++	Line line;
+ 
+ 	switch (sel.snap) {
+ 	case SNAP_WORD:
+@@ -521,7 +899,7 @@ selsnap(int *x, int *y, int direction)
+ 		 * Snap around if the word wraps around at the end or
+ 		 * beginning of a line.
+ 		 */
+-		prevgp = &term.line[*y][*x];
++		prevgp = &renderline(*y)[*x];
+ 		prevdelim = ISDELIM(prevgp->u);
+ 		for (;;) {
+ 			newx = *x + direction;
+@@ -536,14 +914,15 @@ selsnap(int *x, int *y, int direction)
+ 					yt = *y, xt = *x;
+ 				else
+ 					yt = newy, xt = newx;
+-				if (!(term.line[yt][xt].mode & ATTR_WRAP))
++				line = renderline(yt);
++				if (!(line[xt].mode & ATTR_WRAP))
+ 					break;
+ 			}
+ 
+-			if (newx >= tlinelen(newy))
++			if (newx >= tlinelen_render(newy))
+ 				break;
+ 
+-			gp = &term.line[newy][newx];
++			gp = &renderline(newy)[newx];
+ 			delim = ISDELIM(gp->u);
+ 			if (!(gp->mode & ATTR_WDUMMY) && (delim != prevdelim
+ 					|| (delim && gp->u != prevgp->u)))
+@@ -564,14 +943,14 @@ selsnap(int *x, int *y, int direction)
+ 		*x = (direction < 0) ? 0 : term.col - 1;
+ 		if (direction < 0) {
+ 			for (; *y > 0; *y += direction) {
+-				if (!(term.line[*y-1][term.col-1].mode
++				if (!(renderline(*y-1)[term.col-1].mode
+ 						& ATTR_WRAP)) {
+ 					break;
+ 				}
+ 			}
+ 		} else if (direction > 0) {
+ 			for (; *y < term.row-1; *y += direction) {
+-				if (!(term.line[*y][term.col-1].mode
++				if (!(renderline(*y)[term.col-1].mode
+ 						& ATTR_WRAP)) {
+ 					break;
+ 				}
+@@ -585,8 +964,9 @@ char *
+ getsel(void)
+ {
+ 	char *str, *ptr;
+-	int y, bufsize, lastx, linelen;
++	int y, bufsize, lastx, linelen, end_idx, insert_newline, is_wrapped;
+ 	const Glyph *gp, *last;
++	Line line;
+ 
+ 	if (sel.ob.x == -1)
+ 		return NULL;
+@@ -596,29 +976,33 @@ getsel(void)
+ 
+ 	/* append every set & selected glyph to the selection */
+ 	for (y = sel.nb.y; y <= sel.ne.y; y++) {
+-		if ((linelen = tlinelen(y)) == 0) {
++		line = renderline(y);
++		linelen = tlinelen_render(y);
++
++		if (linelen == 0) {
+ 			*ptr++ = '\n';
+ 			continue;
+ 		}
+ 
+ 		if (sel.type == SEL_RECTANGULAR) {
+-			gp = &term.line[y][sel.nb.x];
++			gp = &line[sel.nb.x];
+ 			lastx = sel.ne.x;
+ 		} else {
+-			gp = &term.line[y][sel.nb.y == y ? sel.nb.x : 0];
++			gp = &line[sel.nb.y == y ? sel.nb.x : 0];
+ 			lastx = (sel.ne.y == y) ? sel.ne.x : term.col-1;
+ 		}
+-		last = &term.line[y][MIN(lastx, linelen-1)];
+-		while (last >= gp && last->u == ' ')
++		end_idx = MIN(lastx, linelen-1);
++		is_wrapped = (line[end_idx].mode & ATTR_WRAP) != 0;
++		last = &line[end_idx];
++		while (last >= gp && last->u == ' ') {
+ 			--last;
++		}
+ 
+ 		for ( ; gp <= last; ++gp) {
+ 			if (gp->mode & ATTR_WDUMMY)
+ 				continue;
+-
+ 			ptr += utf8encode(gp->u, ptr);
+ 		}
+-
+ 		/*
+ 		 * Copy and pasting of line endings is inconsistent
+ 		 * in the inconsistent terminal and GUI world.
+@@ -628,8 +1012,13 @@ getsel(void)
+ 		 * st.
+ 		 * FIXME: Fix the computer world.
+ 		 */
++		insert_newline = 0;
+ 		if ((y < sel.ne.y || lastx >= linelen) &&
+-		    (!(last->mode & ATTR_WRAP) || sel.type == SEL_RECTANGULAR))
++			(!is_wrapped || sel.type == SEL_RECTANGULAR)) {
++			insert_newline = 1;
++		}
++
++		if (insert_newline)
+ 			*ptr++ = '\n';
+ 	}
+ 	*ptr = 0;
+@@ -845,6 +1234,12 @@ ttywrite(const char *s, size_t n, int may_echo)
+ {
+ 	const char *next;
+ 
++	if (sb.view_offset > 0) {
++		selclear();
++		sb.view_offset = 0;
++		sb_view_changed();
++	}
++
+ 	if (may_echo && IS_SET(MODE_ECHO))
+ 		twrite(s, n, 1);
+ 
+@@ -965,7 +1360,7 @@ tsetdirt(int top, int bot)
+ {
+ 	int i;
+ 
+-	if (term.row <= 0)
++	if (term.row < 1)
+ 		return;
+ 
+ 	LIMIT(top, 0, term.row-1);
+@@ -1033,15 +1428,21 @@ treset(void)
+ 	for (i = 0; i < 2; i++) {
+ 		tmoveto(0, 0);
+ 		tcursor(CURSOR_SAVE);
+-		tclearregion(0, 0, term.col-1, term.row-1);
++		if (term.col > 0 && term.row > 0 && term.line > 0)
++			tclearregion(0, 0, term.col-1, term.row-1);
+ 		tswapscreen();
+ 	}
++	sb_clear();
++	if (sel.ob.x != -1 && term.row > 0)
++		selclear();
+ }
+ 
++
+ void
+ tnew(int col, int row)
+ {
+ 	term = (Term){ .c = { .attr = { .fg = defaultfg, .bg = defaultbg } } };
++	sb_init(scrollback_lines);
+ 	tresize(col, row);
+ 	treset();
+ }
+@@ -1081,10 +1482,37 @@ void
+ tscrollup(int orig, int n)
+ {
+ 	int i;
++	uint64_t newstart;
++	uint64_t oldstart;
++
++	int attop;
+ 	Line temp;
+ 
++	oldstart = sb_view_start();
+ 	LIMIT(n, 0, term.bot-orig+1);
+ 
++	if (!IS_SET(MODE_ALTSCREEN) && orig == term.top) {
++		/* At top of history only if history exists */
++		attop = (sb.len != 0 && sb.view_offset == sb.len);
++
++		if (sb.view_offset > 0 && !attop)
++			sb.view_offset += n;
++
++		for (i = 0; i < n; i++)
++			sb_push(term.line[orig + i]);
++
++		/* if at the top, keep me there */
++		if (attop)
++			sb.view_offset = sb.len;
++		/* otherwise clamp me */
++		else if (sb.view_offset > sb.len)
++			sb.view_offset = sb.len;
++	}
++
++	newstart = sb_view_start();
++	if (sb.view_offset > 0)
++		selscrollback(oldstart - newstart);
++
+ 	tclearregion(0, orig, term.col-1, orig+n-1);
+ 	tsetdirt(orig+n, term.bot);
+ 
+@@ -1100,6 +1528,8 @@ tscrollup(int orig, int n)
+ void
+ selscroll(int orig, int n)
+ {
++	if (sb.view_offset != 0)
++		return;
+ 	if (sel.ob.x == -1 || sel.alt != IS_SET(MODE_ALTSCREEN))
+ 		return;
+ 
+@@ -1108,12 +1538,7 @@ selscroll(int orig, int n)
+ 	} else if (BETWEEN(sel.nb.y, orig, term.bot)) {
+ 		sel.ob.y += n;
+ 		sel.oe.y += n;
+-		if (sel.ob.y < term.top || sel.ob.y > term.bot ||
+-		    sel.oe.y < term.top || sel.oe.y > term.bot) {
+-			selclear();
+-		} else {
+-			selnormalize();
+-		}
++		selnormalize();
+ 	}
+ }
+ 
+@@ -1130,6 +1555,28 @@ tnewline(int first_col)
+ 	tmoveto(first_col ? 0 : term.c.x, y);
+ }
+ 
++void
++readcolonargs(char **p, int cursor, int params[][CAR_PER_ARG])
++{
++	int i = 0;
++	for (; i < CAR_PER_ARG; i++)
++		params[cursor][i] = -1;
++
++	if (**p != ':')
++		return;
++
++	char *np = NULL;
++	i = 0;
++
++	while (**p == ':' && i < CAR_PER_ARG) {
++		while (**p == ':')
++			(*p)++;
++		params[cursor][i] = strtol(*p, &np, 10);
++		*p = np;
++		i++;
++	}
++}
++
+ void
+ csiparse(void)
+ {
+@@ -1371,6 +1818,10 @@ tsetattr(const int *attr, int l)
+ 				ATTR_STRUCK     );
+ 			term.c.attr.fg = defaultfg;
+ 			term.c.attr.bg = defaultbg;
++			term.c.attr.ustyle = -1;
++			term.c.attr.ucolor[0] = -1;
++			term.c.attr.ucolor[1] = -1;
++			term.c.attr.ucolor[2] = -1;
+ 			break;
+ 		case 1:
+ 			term.c.attr.mode |= ATTR_BOLD;
+@@ -1382,7 +1833,14 @@ tsetattr(const int *attr, int l)
+ 			term.c.attr.mode |= ATTR_ITALIC;
+ 			break;
+ 		case 4:
+-			term.c.attr.mode |= ATTR_UNDERLINE;
++			term.c.attr.ustyle = csiescseq.carg[i][0];
++
++			if (term.c.attr.ustyle != 0)
++				term.c.attr.mode |= ATTR_UNDERLINE;
++			else
++				term.c.attr.mode &= ~ATTR_UNDERLINE;
++
++			term.c.attr.mode ^= ATTR_DIRTYUNDERLINE;
+ 			break;
+ 		case 5: /* slow blink */
+ 			/* FALLTHROUGH */
+@@ -1720,6 +2178,12 @@ csihandle(void)
+ 			break;
+ 		case 2: /* all */
+ 			tclearregion(0, 0, term.col-1, term.row-1);
++			if (!IS_SET(MODE_ALTSCREEN))
++				sb_reset_on_clear();
++			break;
++		case 3:
++			if (!IS_SET(MODE_ALTSCREEN))
++				sb_reset_on_clear();
+ 			break;
+ 		default:
+ 			goto unknown;
+@@ -2109,7 +2573,7 @@ tdumpline(int n)
+ 	const Glyph *bp, *end;
+ 
+ 	bp = &term.line[n][0];
+-	end = &bp[MIN(tlinelen(n), term.col) - 1];
++	end = &bp[MIN(tlinelen_render(n), term.col) - 1];
+ 	if (bp != end || bp->u != ' ') {
+ 		for ( ; bp <= end; ++bp)
+ 			tprinter(buf, utf8encode(bp->u, buf));
+@@ -2166,6 +2630,46 @@ tdeftran(char ascii)
+ 	}
+ }
+ 
++static void
++kscroll(const Arg *arg)
++{
++	uint64_t oldstart;
++	uint64_t newstart;
++
++	oldstart = sb_view_start();
++	sb.view_offset += arg->i;
++	LIMIT(sb.view_offset, 0, sb.len);
++	newstart = sb_view_start();
++	selscrollback(oldstart - newstart);
++	redraw();
++}
++
++void
++kscrolldown(const Arg *arg)
++{
++	Arg a;
++
++	if (arg->i < 0)
++		a.i = -term.row;
++	else
++		a.i = -arg->i;
++
++	kscroll(&a);
++}
++
++void
++kscrollup(const Arg *arg)
++{
++	Arg a;
++
++	if (arg->i < 0)
++		a.i = term.row;
++	else
++		a.i = arg->i;
++
++	kscroll(&a);
++}
++
+ void
+ tdectest(char c)
+ {
+@@ -2572,83 +3076,139 @@ twrite(const char *buf, int buflen, int show_ctrl)
+ void
+ tresize(int col, int row)
+ {
+-	int i;
++	int i, j;
++	int min_limit;
+ 	int minrow = MIN(row, term.row);
+-	int mincol = MIN(col, term.col);
+-	int *bp;
+-	TCursor c;
++	int old_row = term.row;
++	int old_col = term.col;
++	int save_end = 0; /* Track effective pushed height */
++	int loaded = 0;
++	int pop_width = 0;
++	int needs_reflow = 0;
++	int is_alt = IS_SET(MODE_ALTSCREEN);
++	Line *tmp;
+ 
+ 	if (col < 1 || row < 1) {
+ 		fprintf(stderr,
+-		        "tresize: error resizing to %dx%d\n", col, row);
++			"tresize: error resizing to %dx%d\n", col, row);
+ 		return;
+ 	}
+ 
+-	/*
+-	 * slide screen to keep cursor where we expect it -
+-	 * tscrollup would work here, but we can optimize to
+-	 * memmove because we're freeing the earlier lines
+-	 */
+-	for (i = 0; i <= term.c.y - row; i++) {
+-		free(term.line[i]);
+-		free(term.alt[i]);
+-	}
+-	/* ensure that both src and dst are not NULL */
+-	if (i > 0) {
+-		memmove(term.line, term.line + i, row * sizeof(Line));
+-		memmove(term.alt, term.alt + i, row * sizeof(Line));
+-	}
+-	for (i += row; i < term.row; i++) {
+-		free(term.line[i]);
+-		free(term.alt[i]);
++	if (sel.ob.x != -1)
++		selclear();
++
++	/* Operate on the currently visible screen buffer. */
++	if (is_alt) {
++		tmp = term.line;
++		term.line = term.alt;
++		term.alt = tmp;
+ 	}
+ 
+-	/* resize to new height */
+-	term.line = xrealloc(term.line, row * sizeof(Line));
+-	term.alt  = xrealloc(term.alt,  row * sizeof(Line));
+-	term.dirty = xrealloc(term.dirty, row * sizeof(*term.dirty));
+-	term.tabs = xrealloc(term.tabs, col * sizeof(*term.tabs));
++	save_end = term.row;
++	if (term.row != 0 && term.col != 0) {
++		if (!is_alt && term.c.y > 0 && term.c.y < term.row) {
++			term.line[term.c.y - 1][term.col - 1].mode &= ~ATTR_WRAP;
++		}
++		min_limit = is_alt ? 0 : term.c.y;
+ 
+-	/* resize each row to new width, zero-pad if needed */
+-	for (i = 0; i < minrow; i++) {
+-		term.line[i] = xrealloc(term.line[i], col * sizeof(Glyph));
+-		term.alt[i]  = xrealloc(term.alt[i],  col * sizeof(Glyph));
+-	}
++		for (i = term.row - 1; i > min_limit; i--) {
++			if (tlinelen(term.line[i]) > 0)
++				break;
++		}
++		save_end = i + 1;
+ 
+-	/* allocate any new rows */
+-	for (/* i = minrow */; i < row; i++) {
+-		term.line[i] = xmalloc(col * sizeof(Glyph));
+-		term.alt[i] = xmalloc(col * sizeof(Glyph));
++		for (i = 0; i < save_end; i++) {
++			sb_push(term.line[i]);
++		}
++		/* Optimization: Only reflow if content doesn't fit in new width.
++		 * This avoids expensive reflow operations when resizing doesn't
++		 * affect line wrapping (e.g., when terminal is wide enough). */
++		if (col > term.col) {
++			/* Growing: Only reflow if history was wrapped at old width */
++			needs_reflow = sb.max_width >= term.col;
++		} else if (col < term.col) {
++			/* Shrinking: Only reflow if content is wider than new width. */
++			if (sb.max_width > col)
++				needs_reflow = 1;
++		}
++		if (needs_reflow) {
++			sb_resize(col);
++		} else {
++			/* If we don't reflow, we still need to reset the view
++			 * because sb_pop_screen() might change the history length. */
++			sb.view_offset = 0;
++		}
+ 	}
+-	if (col > term.col) {
+-		bp = term.tabs + term.col;
+ 
+-		memset(bp, 0, sizeof(*term.tabs) * (col - term.col));
+-		while (--bp > term.tabs && !*bp)
+-			/* nothing */ ;
+-		for (bp += tabspaces; bp < term.tabs + col; bp += tabspaces)
+-			*bp = 1;
+-	}
+-	/* update terminal size */
++		if (term.line) {
++			for (i = 0; i < term.row; i++) {
++				free(term.line[i]);
++				free(term.alt[i]);
++			}
++			free(term.line);
++			free(term.alt);
++			free(term.dirty);
++			free(term.tabs);
++		}
++
+ 	term.col = col;
+ 	term.row = row;
+-	/* reset scrolling region */
+-	tsetscroll(0, row-1);
+-	/* make use of the LIMIT in tmoveto */
+-	tmoveto(term.c.x, term.c.y);
+-	/* Clearing both screens (it makes dirty all lines) */
+-	c = term.c;
+-	for (i = 0; i < 2; i++) {
+-		if (mincol < col && 0 < minrow) {
+-			tclearregion(mincol, 0, col - 1, minrow - 1);
+-		}
+-		if (0 < col && minrow < row) {
+-			tclearregion(0, minrow, col - 1, row - 1);
++
++	term.line  = xmalloc(term.row * sizeof(Line));
++	term.alt   = xmalloc(term.row * sizeof(Line));
++	term.dirty = xmalloc(term.row * sizeof(int));
++	term.tabs  = xmalloc(term.col * sizeof(*term.tabs));
++
++	for (i = 0; i < term.row; i++) {
++		term.line[i] = xmalloc(term.col * sizeof(Glyph));
++		term.alt[i]  = xmalloc(term.col * sizeof(Glyph));
++		term.dirty[i] = 1;
++
++		for (j = 0; j < term.col; j++) {
++			term.line[i][j] = term.c.attr;
++			term.line[i][j].u = ' ';
++			term.line[i][j].mode = 0;
++
++			term.alt[i][j] = term.c.attr;
++			term.alt[i][j].u = ' ';
++			term.alt[i][j].mode = 0;
+ 		}
+-		tswapscreen();
+-		tcursor(CURSOR_LOAD);
+ 	}
+-	term.c = c;
++
++	memset(term.tabs, 0, term.col * sizeof(*term.tabs));
++	for (i = 8; i < term.col; i += 8)
++		term.tabs[i] = 1;
++
++	tsetscroll(0, term.row - 1);
++
++	if (minrow > 0) {
++		loaded = MIN(sb.len, term.row);
++		pop_width = needs_reflow ? col : MIN(col, old_col);
++		sb_pop_screen(loaded, pop_width);
++	}
++	if (is_alt) {
++		tmp = term.line;
++		term.line = term.alt;
++		term.alt = tmp;
++	}
++	if (!is_alt && old_row > 0) {
++		term.c.y += (loaded - save_end);
++	}
++	if (term.c.y >= term.row) {
++		term.c.y = term.row - 1;
++	}
++	if (term.c.x >= term.col) {
++		term.c.x = term.col - 1;
++	}
++	if (term.c.y < 0) {
++		term.c.y = 0;
++	}
++	if (term.c.x < 0) {
++		term.c.x = 0;
++	}
++
++	tfulldirt();
++	sb_view_changed();
+ }
+ 
+ void
+@@ -2662,12 +3222,13 @@ drawregion(int x1, int y1, int x2, int y2)
+ {
+ 	int y;
+ 
++	Line line;
+ 	for (y = y1; y < y2; y++) {
+ 		if (!term.dirty[y])
+ 			continue;
+-
+ 		term.dirty[y] = 0;
+-		xdrawline(term.line[y], x1, y, x2);
++		line = renderline(y);
++		xdrawline(line, x1, y, x2);
+ 	}
+ }
+ 
+@@ -2688,10 +3249,13 @@ draw(void)
+ 		cx--;
+ 
+ 	drawregion(0, 0, term.col, term.row);
+-	xdrawcursor(cx, term.c.y, term.line[term.c.y][cx],
+-			term.ocx, term.ocy, term.line[term.ocy][term.ocx]);
+-	term.ocx = cx;
+-	term.ocy = term.c.y;
++	if (sb.view_offset == 0) {
++		xdrawcursor(cx, term.c.y, term.line[term.c.y][cx],
++			          term.ocx, term.ocy, term.line[term.ocy][term.ocx],
++			          term.line[term.ocy], term.col);
++		term.ocx = cx;
++		term.ocy = term.c.y;
++	}
+ 	xfinishdraw();
+ 	if (ocx != term.ocx || ocy != term.ocy)
+ 		xximspot(term.ocx, term.ocy);
+diff --git a/st.h b/st.h
+index fd3b0d8..9e666b0 100644
+--- a/st.h
++++ b/st.h
+@@ -11,7 +11,8 @@
+ #define DIVCEIL(n, d)		(((n) + ((d) - 1)) / (d))
+ #define DEFAULT(a, b)		(a) = (a) ? (a) : (b)
+ #define LIMIT(x, a, b)		(x) = (x) < (a) ? (a) : (x) > (b) ? (b) : (x)
+-#define ATTRCMP(a, b)		((a).mode != (b).mode || (a).fg != (b).fg || \
++#define ATTRCMP(a, b)		(((a).mode & (~ATTR_WRAP)) != ((b).mode & (~ATTR_WRAP)) || \
++				(a).fg != (b).fg || \
+ 				(a).bg != (b).bg)
+ #define TIMEDIFF(t1, t2)	((t1.tv_sec-t2.tv_sec)*1000 + \
+ 				(t1.tv_nsec-t2.tv_nsec)/1E6)
+@@ -34,6 +35,7 @@ enum glyph_attribute {
+ 	ATTR_WIDE       = 1 << 9,
+ 	ATTR_WDUMMY     = 1 << 10,
+ 	ATTR_BOLD_FAINT = ATTR_BOLD | ATTR_FAINT,
++	ATTR_DIRTYUNDERLINE = 1 << 15,
+ };
+ 
+ enum selection_mode {
+@@ -65,6 +67,8 @@ typedef struct {
+ 	ushort mode;      /* attribute flags */
+ 	uint32_t fg;      /* foreground  */
+ 	uint32_t bg;      /* background  */
++	int ustyle;	  /* underline style */
++	int ucolor[3];    /* underline color */
+ } Glyph;
+ 
+ typedef Glyph *Line;
+@@ -86,6 +90,7 @@ void printsel(const Arg *);
+ void sendbreak(const Arg *);
+ void toggleprinter(const Arg *);
+ 
++int tisaltscreen(void);
+ int tattrset(int);
+ void tnew(int, int);
+ void tresize(int, int);
+@@ -111,6 +116,9 @@ void *xmalloc(size_t);
+ void *xrealloc(void *, size_t);
+ char *xstrdup(const char *);
+ 
++void kscrollup(const Arg *arg);
++void kscrolldown(const Arg *arg);
++
+ /* config.h globals */
+ extern char *utmp;
+ extern char *scroll;
+@@ -124,3 +132,4 @@ extern unsigned int tabspaces;
+ extern unsigned int defaultfg;
+ extern unsigned int defaultbg;
+ extern unsigned int defaultcs;
++extern unsigned int scrollback_lines;
+diff --git a/st.info b/st.info
+index efab2cf..cf9af17 100644
+--- a/st.info
++++ b/st.info
+@@ -1,4 +1,5 @@
+ st-mono| simpleterm monocolor,
++	Su,
+ 	acsc=+C\,D-A.B0E``aaffgghFiGjjkkllmmnnooppqqrrssttuuvvwwxxyyzz{{||}}~~,
+ 	am,
+ 	bce,
+@@ -47,7 +48,7 @@ st-mono| simpleterm monocolor,
+ 	indn=\E[%p1%dS,
+ 	invis=\E[8m,
+ 	is2=\E[4l\E>\E[?1034l,
+-	it#8,
++	it#2,
+ 	kel=\E[1;2F,
+ 	ked=\E[1;5F,
+ 	ka1=\E[1~,
+diff --git a/win.h b/win.h
+index 6de960d..94679e4 100644
+--- a/win.h
++++ b/win.h
+@@ -25,7 +25,7 @@ enum win_mode {
+ 
+ void xbell(void);
+ void xclipcopy(void);
+-void xdrawcursor(int, int, Glyph, int, int, Glyph);
++void xdrawcursor(int, int, Glyph, int, int, Glyph, Line, int);
+ void xdrawline(Line, int, int, int);
+ void xfinishdraw(void);
+ void xloadcols(void);
+diff --git a/x.c b/x.c
+index d73152b..ff3e6c6 100644
+--- a/x.c
++++ b/x.c
+@@ -14,11 +14,13 @@
+ #include <X11/keysym.h>
+ #include <X11/Xft/Xft.h>
+ #include <X11/XKBlib.h>
++#include <X11/Xresource.h>
+ 
+ char *argv0;
+ #include "arg.h"
+ #include "st.h"
+ #include "win.h"
++#include "hb.h"
+ 
+ /* types used in config.h */
+ typedef struct {
+@@ -45,11 +47,34 @@ typedef struct {
+ 	signed char appcursor; /* application cursor */
+ } Key;
+ 
++/* Undercurl slope types */
++enum undercurl_slope_type {
++	UNDERCURL_SLOPE_ASCENDING = 0,
++	UNDERCURL_SLOPE_TOP_CAP = 1,
++	UNDERCURL_SLOPE_DESCENDING = 2,
++	UNDERCURL_SLOPE_BOTTOM_CAP = 3
++};
++
++/* Xresources preferences */
++enum resource_type {
++	STRING = 0,
++	INTEGER = 1,
++	FLOAT = 2
++};
++
++typedef struct {
++	char *name;
++	enum resource_type type;
++	void *dst;
++} ResourcePref;
++
+ /* X modifiers */
+ #define XK_ANY_MOD    UINT_MAX
+ #define XK_NO_MOD     0
+ #define XK_SWITCH_MOD (1<<13|1<<14)
+ 
++int borderpx;
++
+ /* function definitions used in config.h */
+ static void clipcopy(const Arg *);
+ static void clippaste(const Arg *);
+@@ -81,6 +106,7 @@ typedef XftGlyphFontSpec GlyphFontSpec;
+ typedef struct {
+ 	int tw, th; /* tty width and height */
+ 	int w, h; /* window width and height */
++	int hborderpx, vborderpx;
+ 	int ch; /* char height */
+ 	int cw; /* char width  */
+ 	int mode; /* window state/mode flags */
+@@ -105,6 +131,7 @@ typedef struct {
+ 	XSetWindowAttributes attrs;
+ 	int scr;
+ 	int isfixed; /* is fixed geometry? */
++	int depth; /* bit depth */
+ 	int l, t; /* left and top offset */
+ 	int gm; /* geometry mask */
+ } XWindow;
+@@ -141,8 +168,9 @@ typedef struct {
+ } DC;
+ 
+ static inline ushort sixd_to_16bit(int);
++static void xresetfontsettings(ushort mode, Font **font, int *frcflags);
+ static int xmakeglyphfontspecs(XftGlyphFontSpec *, const Glyph *, int, int, int);
+-static void xdrawglyphfontspecs(const XftGlyphFontSpec *, Glyph, int, int, int);
++static void xdrawglyphfontspecs(const XftGlyphFontSpec *, Glyph, int, int, int, int);
+ static void xdrawglyph(Glyph, int, int);
+ static void xclear(int, int, int, int);
+ static int xgeommasktogravity(int);
+@@ -157,6 +185,8 @@ static void xhints(void);
+ static int xloadcolor(int, const char *, Color *);
+ static int xloadfont(Font *, FcPattern *);
+ static void xloadfonts(const char *, double);
++static int xloadsparefont(FcPattern *, int);
++static void xloadsparefonts(void);
+ static void xunloadfont(Font *);
+ static void xunloadfonts(void);
+ static void xsetenv(void);
+@@ -306,6 +336,7 @@ zoomabs(const Arg *arg)
+ {
+ 	xunloadfonts();
+ 	xloadfonts(usedfont, arg->f);
++	xloadsparefonts();
+ 	cresize(0, 0);
+ 	redraw();
+ 	xhints();
+@@ -331,7 +362,7 @@ ttysend(const Arg *arg)
+ int
+ evcol(XEvent *e)
+ {
+-	int x = e->xbutton.x - borderpx;
++	int x = e->xbutton.x - win.hborderpx;
+ 	LIMIT(x, 0, win.tw - 1);
+ 	return x / win.cw;
+ }
+@@ -339,7 +370,7 @@ evcol(XEvent *e)
+ int
+ evrow(XEvent *e)
+ {
+-	int y = e->xbutton.y - borderpx;
++	int y = e->xbutton.y - win.vborderpx;
+ 	LIMIT(y, 0, win.th - 1);
+ 	return y / win.ch;
+ }
+@@ -472,6 +503,23 @@ bpress(XEvent *e)
+ 	struct timespec now;
+ 	int snap;
+ 
++	if (btn == Button4 || btn == Button5) {
++		Arg a;
++		if (IS_SET(MODE_MOUSE) && !(e->xbutton.state & forcemousemod)) {
++			mousereport(e);
++			return;
++		}
++		if (!tisaltscreen()) {
++			a.i = 1;
++			if (btn == Button4) {
++				kscrollup(&a);
++			} else {
++				kscrolldown(&a);
++			}
++		}
++		return;
++	}
++
+ 	if (1 <= btn && btn <= 11)
+ 		buttons |= 1 << (btn-1);
+ 
+@@ -739,6 +787,9 @@ cresize(int width, int height)
+ 	col = MAX(1, col);
+ 	row = MAX(1, row);
+ 
++	win.hborderpx = (win.w - col * win.cw) / 2;
++	win.vborderpx = (win.h - row * win.ch) / 2;
++
+ 	tresize(col, row);
+ 	xresize(col, row);
+ 	ttyresize(win.tw, win.th);
+@@ -752,12 +803,12 @@ xresize(int col, int row)
+ 
+ 	XFreePixmap(xw.dpy, xw.buf);
+ 	xw.buf = XCreatePixmap(xw.dpy, xw.win, win.w, win.h,
+-			DefaultDepth(xw.dpy, xw.scr));
++			xw.depth);
+ 	XftDrawChange(xw.draw, xw.buf);
+ 	xclear(0, 0, win.w, win.h);
+ 
+ 	/* resize to new width */
+-	xw.specbuf = xrealloc(xw.specbuf, col * sizeof(GlyphFontSpec));
++	xw.specbuf = xrealloc(xw.specbuf, col * sizeof(GlyphFontSpec) * 4);
+ }
+ 
+ ushort
+@@ -812,6 +863,10 @@ xloadcols(void)
+ 			else
+ 				die("could not allocate color %d\n", i);
+ 		}
++
++	dc.col[defaultbg].color.alpha = (unsigned short)(0xffff * alpha);
++	dc.col[defaultbg].pixel &= 0x00FFFFFF;
++	dc.col[defaultbg].pixel |= (unsigned char)(0xff * alpha) << 24;
+ 	loaded = 1;
+ }
+ 
+@@ -842,6 +897,12 @@ xsetcolorname(int x, const char *name)
+ 	XftColorFree(xw.dpy, xw.vis, xw.cmap, &dc.col[x]);
+ 	dc.col[x] = ncolor;
+ 
++	if (x == defaultbg) {
++		dc.col[defaultbg].color.alpha = (unsigned short)(0xffff * alpha);
++		dc.col[defaultbg].pixel &= 0x00FFFFFF;
++		dc.col[defaultbg].pixel |= (unsigned char)(0xff * alpha) << 24;
++	}
++
+ 	return 0;
+ }
+ 
+@@ -859,8 +920,8 @@ xclear(int x1, int y1, int x2, int y2)
+ void
+ xhints(void)
+ {
+-	XClassHint class = {opt_name ? opt_name : termname,
+-	                    opt_class ? opt_class : termname};
++	XClassHint class = {opt_name ? opt_name : "st",
++	                    opt_class ? opt_class : "St"};
+ 	XWMHints wm = {.flags = InputHint, .input = 1};
+ 	XSizeHints *sizeh;
+ 
+@@ -869,8 +930,8 @@ xhints(void)
+ 	sizeh->flags = PSize | PResizeInc | PBaseSize | PMinSize;
+ 	sizeh->height = win.h;
+ 	sizeh->width = win.w;
+-	sizeh->height_inc = win.ch;
+-	sizeh->width_inc = win.cw;
++	sizeh->height_inc = 1;
++	sizeh->width_inc = 1;
+ 	sizeh->base_height = 2 * borderpx;
+ 	sizeh->base_width = 2 * borderpx;
+ 	sizeh->min_height = win.ch + 2 * borderpx;
+@@ -1032,6 +1093,8 @@ xloadfonts(const char *fontstr, double fontsize)
+ 	win.cw = ceilf(dc.font.width * cwscale);
+ 	win.ch = ceilf(dc.font.height * chscale);
+ 
++	borderpx = ceilf(((float)borderperc / 100) * win.cw);
++
+ 	FcPatternDel(pattern, FC_SLANT);
+ 	FcPatternAddInteger(pattern, FC_SLANT, FC_SLANT_ITALIC);
+ 	if (xloadfont(&dc.ifont, pattern))
+@@ -1050,6 +1113,101 @@ xloadfonts(const char *fontstr, double fontsize)
+ 	FcPatternDestroy(pattern);
+ }
+ 
++int
++xloadsparefont(FcPattern *pattern, int flags)
++{
++	FcPattern *match;
++	FcResult result;
++
++	match = FcFontMatch(NULL, pattern, &result);
++	if (!match) {
++		return 1;
++	}
++
++	if (!(frc[frclen].font = XftFontOpenPattern(xw.dpy, match))) {
++		FcPatternDestroy(match);
++		return 1;
++	}
++
++	frc[frclen].flags = flags;
++	/* Believe U+0000 glyph will present in each default font */
++	frc[frclen].unicodep = 0;
++	frclen++;
++
++	return 0;
++}
++
++void
++xloadsparefonts(void)
++{
++	FcPattern *pattern;
++	double sizeshift, fontval;
++	int fc;
++	char **fp;
++
++	if (frclen != 0)
++		die("can't embed spare fonts. cache isn't empty");
++
++	/* Calculate count of spare fonts */
++	fc = sizeof(font2) / sizeof(*font2);
++	if (fc == 0)
++		return;
++
++	/* Allocate memory for cache entries. */
++	if (frccap < 4 * fc) {
++		frccap += 4 * fc - frccap;
++		frc = xrealloc(frc, frccap * sizeof(Fontcache));
++	}
++
++	for (fp = font2; fp - font2 < fc; ++fp) {
++
++		if (**fp == '-')
++			pattern = XftXlfdParse(*fp, False, False);
++		else
++			pattern = FcNameParse((FcChar8 *)*fp);
++
++		if (!pattern)
++			die("can't open spare font %s\n", *fp);
++
++		if (defaultfontsize > 0) {
++			sizeshift = usedfontsize - defaultfontsize;
++			if (sizeshift != 0 &&
++					FcPatternGetDouble(pattern, FC_PIXEL_SIZE, 0, &fontval) ==
++					FcResultMatch) {
++				fontval += sizeshift;
++				FcPatternDel(pattern, FC_PIXEL_SIZE);
++				FcPatternDel(pattern, FC_SIZE);
++				FcPatternAddDouble(pattern, FC_PIXEL_SIZE, fontval);
++			}
++		}
++
++		FcPatternAddBool(pattern, FC_SCALABLE, 1);
++
++		FcConfigSubstitute(NULL, pattern, FcMatchPattern);
++		XftDefaultSubstitute(xw.dpy, xw.scr, pattern);
++
++		if (xloadsparefont(pattern, FRC_NORMAL))
++			die("can't open spare font %s\n", *fp);
++
++		FcPatternDel(pattern, FC_SLANT);
++		FcPatternAddInteger(pattern, FC_SLANT, FC_SLANT_ITALIC);
++		if (xloadsparefont(pattern, FRC_ITALIC))
++			die("can't open spare font %s\n", *fp);
++
++		FcPatternDel(pattern, FC_WEIGHT);
++		FcPatternAddInteger(pattern, FC_WEIGHT, FC_WEIGHT_BOLD);
++		if (xloadsparefont(pattern, FRC_ITALICBOLD))
++			die("can't open spare font %s\n", *fp);
++
++		FcPatternDel(pattern, FC_SLANT);
++		FcPatternAddInteger(pattern, FC_SLANT, FC_SLANT_ROMAN);
++		if (xloadsparefont(pattern, FRC_BOLD))
++			die("can't open spare font %s\n", *fp);
++
++		FcPatternDestroy(pattern);
++	}
++}
++
+ void
+ xunloadfont(Font *f)
+ {
+@@ -1062,6 +1220,9 @@ xunloadfont(Font *f)
+ void
+ xunloadfonts(void)
+ {
++	/* Clear Harfbuzz font cache. */
++	hbunloadfonts();
++
+ 	/* Free the loaded fonts in the font cache.  */
+ 	while (frclen > 0)
+ 		XftFontClose(xw.dpy, frc[--frclen].font);
+@@ -1134,11 +1295,23 @@ xinit(int cols, int rows)
+ 	Window parent, root;
+ 	pid_t thispid = getpid();
+ 	XColor xmousefg, xmousebg;
++	XWindowAttributes attr;
++	XVisualInfo vis;
+ 
+-	if (!(xw.dpy = XOpenDisplay(NULL)))
+-		die("can't open display\n");
+ 	xw.scr = XDefaultScreen(xw.dpy);
+-	xw.vis = XDefaultVisual(xw.dpy, xw.scr);
++
++	root = XRootWindow(xw.dpy, xw.scr);
++	if (!(opt_embed && (parent = strtol(opt_embed, NULL, 0))))
++		parent = root;
++
++	if (XMatchVisualInfo(xw.dpy, xw.scr, 32, TrueColor, &vis) != 0) {
++		xw.vis = vis.visual;
++		xw.depth = vis.depth;
++	} else {
++		XGetWindowAttributes(xw.dpy, parent, &attr);
++		xw.vis = attr.visual;
++		xw.depth = attr.depth;
++	}
+ 
+ 	/* font */
+ 	if (!FcInit())
+@@ -1147,13 +1320,16 @@ xinit(int cols, int rows)
+ 	usedfont = (opt_font == NULL)? font : opt_font;
+ 	xloadfonts(usedfont, 0);
+ 
++	/* spare fonts */
++	xloadsparefonts();
++
+ 	/* colors */
+-	xw.cmap = XDefaultColormap(xw.dpy, xw.scr);
++	xw.cmap = XCreateColormap(xw.dpy, parent, xw.vis, None);
+ 	xloadcols();
+ 
+ 	/* adjust fixed window geometry */
+-	win.w = 2 * borderpx + cols * win.cw;
+-	win.h = 2 * borderpx + rows * win.ch;
++	win.w = 2 * win.hborderpx + 2 * borderpx + cols * win.cw;
++	win.h = 2 * win.vborderpx + 2 * borderpx + rows * win.ch;
+ 	if (xw.gm & XNegative)
+ 		xw.l += DisplayWidth(xw.dpy, xw.scr) - win.w - 2;
+ 	if (xw.gm & YNegative)
+@@ -1168,11 +1344,8 @@ xinit(int cols, int rows)
+ 		| ButtonMotionMask | ButtonPressMask | ButtonReleaseMask;
+ 	xw.attrs.colormap = xw.cmap;
+ 
+-	root = XRootWindow(xw.dpy, xw.scr);
+-	if (!(opt_embed && (parent = strtol(opt_embed, NULL, 0))))
+-		parent = root;
+-	xw.win = XCreateWindow(xw.dpy, root, xw.l, xw.t,
+-			win.w, win.h, 0, XDefaultDepth(xw.dpy, xw.scr), InputOutput,
++	xw.win = XCreateWindow(xw.dpy, parent, xw.l, xw.t,
++			win.w, win.h, 0, xw.depth, InputOutput,
+ 			xw.vis, CWBackPixel | CWBorderPixel | CWBitGravity
+ 			| CWEventMask | CWColormap, &xw.attrs);
+ 	if (parent != root)
+@@ -1183,12 +1356,12 @@ xinit(int cols, int rows)
+ 	dc.gc = XCreateGC(xw.dpy, xw.win, GCGraphicsExposures,
+ 			&gcvalues);
+ 	xw.buf = XCreatePixmap(xw.dpy, xw.win, win.w, win.h,
+-			DefaultDepth(xw.dpy, xw.scr));
++			xw.depth);
+ 	XSetForeground(xw.dpy, dc.gc, dc.col[defaultbg].pixel);
+ 	XFillRectangle(xw.dpy, xw.buf, dc.gc, 0, 0, win.w, win.h);
+ 
+ 	/* font spec buffer */
+-	xw.specbuf = xmalloc(cols * sizeof(GlyphFontSpec));
++	xw.specbuf = xmalloc(cols * sizeof(GlyphFontSpec) * 4);
+ 
+ 	/* Xft rendering context */
+ 	xw.draw = XftDrawCreate(xw.dpy, xw.buf, xw.vis, xw.cmap);
+@@ -1242,143 +1415,198 @@ xinit(int cols, int rows)
+ 		xsel.xtarget = XA_STRING;
+ }
+ 
++void
++xresetfontsettings(ushort mode, Font **font, int *frcflags)
++{
++	*font = &dc.font;
++	if ((mode & ATTR_ITALIC) && (mode & ATTR_BOLD)) {
++		*font = &dc.ibfont;
++		*frcflags = FRC_ITALICBOLD;
++	} else if (mode & ATTR_ITALIC) {
++		*font = &dc.ifont;
++		*frcflags = FRC_ITALIC;
++	} else if (mode & ATTR_BOLD) {
++		*font = &dc.bfont;
++		*frcflags = FRC_BOLD;
++	}
++}
++
+ int
+ xmakeglyphfontspecs(XftGlyphFontSpec *specs, const Glyph *glyphs, int len, int x, int y)
+ {
+-	float winx = borderpx + x * win.cw, winy = borderpx + y * win.ch, xp, yp;
+-	ushort mode, prevmode = USHRT_MAX;
++	float winx = win.hborderpx + x * win.cw, winy = win.vborderpx + y * win.ch, xp, yp;
++	ushort mode = glyphs[0].mode & ~ATTR_WRAP;
+ 	Font *font = &dc.font;
+ 	int frcflags = FRC_NORMAL;
+-	float runewidth = win.cw;
++	float runewidth = win.cw * ((glyphs[0].mode & ATTR_WIDE) ? 2.0f : 1.0f);
+ 	Rune rune;
+ 	FT_UInt glyphidx;
+ 	FcResult fcres;
+ 	FcPattern *fcpattern, *fontpattern;
+ 	FcFontSet *fcsets[] = { NULL };
+ 	FcCharSet *fccharset;
+-	int i, f, numspecs = 0;
++	int f, code_idx, numspecs = 0;
++	float cluster_xp = xp, cluster_yp = yp;
++	HbTransformData shaped = { 0 };
++
++	/* Initial values. */
++	xresetfontsettings(mode, &font, &frcflags);
++
++	/* Shape the segment. */
++	hbtransform(&shaped, font->match, glyphs, 0, len);
++	xp = winx; yp = winy + font->ascent;
++	cluster_xp = xp; cluster_yp = yp;
+ 
+-	for (i = 0, xp = winx, yp = winy + font->ascent; i < len; ++i) {
+-		/* Fetch rune and mode for current glyph. */
+-		rune = glyphs[i].u;
+-		mode = glyphs[i].mode;
++	for (code_idx = 0; code_idx < shaped.count; code_idx++) {
++		int idx = shaped.glyphs[code_idx].cluster;
+ 
+-		/* Skip dummy wide-character spacing. */
+-		if (mode == ATTR_WDUMMY)
++		if (glyphs[idx].mode & ATTR_WDUMMY)
+ 			continue;
+ 
+-		/* Determine font for glyph if different from previous glyph. */
+-		if (prevmode != mode) {
+-			prevmode = mode;
+-			font = &dc.font;
+-			frcflags = FRC_NORMAL;
+-			runewidth = win.cw * ((mode & ATTR_WIDE) ? 2.0f : 1.0f);
+-			if ((mode & ATTR_ITALIC) && (mode & ATTR_BOLD)) {
+-				font = &dc.ibfont;
+-				frcflags = FRC_ITALICBOLD;
+-			} else if (mode & ATTR_ITALIC) {
+-				font = &dc.ifont;
+-				frcflags = FRC_ITALIC;
+-			} else if (mode & ATTR_BOLD) {
+-				font = &dc.bfont;
+-				frcflags = FRC_BOLD;
+-			}
+-			yp = winy + font->ascent;
++		/* Advance the drawing cursor if we've moved to a new cluster */
++		if (code_idx > 0 && (idx != shaped.glyphs[code_idx - 1].cluster)) {
++			xp += runewidth * (idx - shaped.glyphs[code_idx - 1].cluster);
++			cluster_xp = xp;
++			cluster_yp = yp;
+ 		}
+ 
+-		/* Lookup character index with default font. */
+-		glyphidx = XftCharIndex(xw.dpy, font->match, rune);
+-		if (glyphidx) {
++		if (shaped.glyphs[code_idx].codepoint != 0) {
++			/* If symbol is found, put it into the specs. */
+ 			specs[numspecs].font = font->match;
++			specs[numspecs].glyph = shaped.glyphs[code_idx].codepoint;
++			specs[numspecs].x = cluster_xp + (short)(shaped.positions[code_idx].x_offset / 64.);
++			specs[numspecs].y = cluster_yp - (short)(shaped.positions[code_idx].y_offset / 64.);
++			cluster_xp += shaped.positions[code_idx].x_advance / 64.;
++			cluster_yp += shaped.positions[code_idx].y_advance / 64.;
++			numspecs++;
++		} else {
++			/* If it's not found, try to fetch it through the font cache. */
++			rune = glyphs[idx].u;
++			for (f = 0; f < frclen; f++) {
++				glyphidx = XftCharIndex(xw.dpy, frc[f].font, rune);
++				/* Everything correct. */
++				if (glyphidx && frc[f].flags == frcflags)
++					break;
++				/* We got a default font for a not found glyph. */
++				if (!glyphidx && frc[f].flags == frcflags
++						&& frc[f].unicodep == rune) {
++					break;
++				}
++			}
++			/* Nothing was found. Use fontconfig to find matching font. */
++			if (f >= frclen) {
++				if (!font->set)
++					font->set = FcFontSort(0, font->pattern,
++							       1, 0, &fcres);
++				fcsets[0] = font->set;
++
++				/*
++				 * Nothing was found in the cache. Now use
++				 * some dozen of Fontconfig calls to get the
++				 * font for one single character.
++				 *
++				 * Xft and fontconfig are design failures.
++				 */
++				fcpattern = FcPatternDuplicate(font->pattern);
++				fccharset = FcCharSetCreate();
++
++				FcCharSetAddChar(fccharset, rune);
++				FcPatternAddCharSet(fcpattern, FC_CHARSET,
++						fccharset);
++				FcPatternAddBool(fcpattern, FC_SCALABLE, 1);
++
++				FcConfigSubstitute(0, fcpattern,
++						FcMatchPattern);
++				FcDefaultSubstitute(fcpattern);
++
++				fontpattern = FcFontSetMatch(0, fcsets, 1,
++						fcpattern, &fcres);
++
++				/* Allocate memory for the new cache entry. */
++				if (frclen >= frccap) {
++					frccap += 16;
++					frc = xrealloc(frc, frccap * sizeof(Fontcache));
++				}
++
++				frc[frclen].font = XftFontOpenPattern(xw.dpy,
++						fontpattern);
++				if (!frc[frclen].font)
++					die("XftFontOpenPattern failed seeking fallback font: %s\n",
++						strerror(errno));
++				frc[frclen].flags = frcflags;
++				frc[frclen].unicodep = rune;
++
++				glyphidx = XftCharIndex(xw.dpy, frc[frclen].font, rune);
++
++				f = frclen;
++				frclen++;
++
++				FcPatternDestroy(fcpattern);
++				FcCharSetDestroy(fccharset);
++			}
++			specs[numspecs].font = frc[f].font;
+ 			specs[numspecs].glyph = glyphidx;
+ 			specs[numspecs].x = (short)xp;
+ 			specs[numspecs].y = (short)yp;
+-			xp += runewidth;
+ 			numspecs++;
+-			continue;
+ 		}
++	}
+ 
+-		/* Fallback on font cache, search the font cache for match. */
+-		for (f = 0; f < frclen; f++) {
+-			glyphidx = XftCharIndex(xw.dpy, frc[f].font, rune);
+-			/* Everything correct. */
+-			if (glyphidx && frc[f].flags == frcflags)
+-				break;
+-			/* We got a default font for a not found glyph. */
+-			if (!glyphidx && frc[f].flags == frcflags
+-					&& frc[f].unicodep == rune) {
+-				break;
+-			}
+-		}
+-
+-		/* Nothing was found. Use fontconfig to find matching font. */
+-		if (f >= frclen) {
+-			if (!font->set)
+-				font->set = FcFontSort(0, font->pattern,
+-				                       1, 0, &fcres);
+-			fcsets[0] = font->set;
+-
+-			/*
+-			 * Nothing was found in the cache. Now use
+-			 * some dozen of Fontconfig calls to get the
+-			 * font for one single character.
+-			 *
+-			 * Xft and fontconfig are design failures.
+-			 */
+-			fcpattern = FcPatternDuplicate(font->pattern);
+-			fccharset = FcCharSetCreate();
+-
+-			FcCharSetAddChar(fccharset, rune);
+-			FcPatternAddCharSet(fcpattern, FC_CHARSET,
+-					fccharset);
+-			FcPatternAddBool(fcpattern, FC_SCALABLE, 1);
++	/* Cleanup and get ready for next segment. */
++	hbcleanup(&shaped);
++	return numspecs;
++}
+ 
+-			FcConfigSubstitute(0, fcpattern,
+-					FcMatchPattern);
+-			FcDefaultSubstitute(fcpattern);
+ 
+-			fontpattern = FcFontSetMatch(0, fcsets, 1,
+-					fcpattern, &fcres);
++static int isSlopeRising (int x, int iPoint, int waveWidth)
++{
++	//    .     .     .     .
++	//   / \   / \   / \   / \
++	//  /   \ /   \ /   \ /   \
++	// .     .     .     .     .
+ 
+-			/* Allocate memory for the new cache entry. */
+-			if (frclen >= frccap) {
+-				frccap += 16;
+-				frc = xrealloc(frc, frccap * sizeof(Fontcache));
+-			}
++	// Find absolute `x` of point
++	x += iPoint * (waveWidth/2);
+ 
+-			frc[frclen].font = XftFontOpenPattern(xw.dpy,
+-					fontpattern);
+-			if (!frc[frclen].font)
+-				die("XftFontOpenPattern failed seeking fallback font: %s\n",
+-					strerror(errno));
+-			frc[frclen].flags = frcflags;
+-			frc[frclen].unicodep = rune;
++	// Find index of absolute wave
++	int absSlope = x / ((float)waveWidth/2);
+ 
+-			glyphidx = XftCharIndex(xw.dpy, frc[frclen].font, rune);
++	return (absSlope % 2);
++}
+ 
+-			f = frclen;
+-			frclen++;
++static int getSlope (int x, int iPoint, int waveWidth)
++{
++	// Sizes: Caps are half width of slopes
++	//    1_2       1_2       1_2      1_2
++	//   /   \     /   \     /   \    /   \
++	//  /     \   /     \   /     \  /     \
++	// 0       3_0       3_0      3_0       3_
++	// <2->    <1>         <---6---->
+ 
+-			FcPatternDestroy(fcpattern);
+-			FcCharSetDestroy(fccharset);
+-		}
++	// Find type of first point
++	int firstType;
++	x -= (x / waveWidth) * waveWidth;
++	if (x < (waveWidth * (2.f/6.f)))
++		firstType = UNDERCURL_SLOPE_ASCENDING;
++	else if (x < (waveWidth * (3.f/6.f)))
++		firstType = UNDERCURL_SLOPE_TOP_CAP;
++	else if (x < (waveWidth * (5.f/6.f)))
++		firstType = UNDERCURL_SLOPE_DESCENDING;
++	else
++		firstType = UNDERCURL_SLOPE_BOTTOM_CAP;
+ 
+-		specs[numspecs].font = frc[f].font;
+-		specs[numspecs].glyph = glyphidx;
+-		specs[numspecs].x = (short)xp;
+-		specs[numspecs].y = (short)yp;
+-		xp += runewidth;
+-		numspecs++;
+-	}
++	// Find type of given point
++	int pointType = (iPoint % 4);
++	pointType += firstType;
++	pointType %= 4;
+ 
+-	return numspecs;
++	return pointType;
+ }
+ 
+ void
+-xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len, int x, int y)
++xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len, int x, int y, int charlen)
+ {
+-	int charlen = len * ((base.mode & ATTR_WIDE) ? 2 : 1);
+-	int winx = borderpx + x * win.cw, winy = borderpx + y * win.ch,
++	int winx = win.hborderpx + x * win.cw, winy = win.vborderpx + y * win.ch,
+ 	    width = charlen * win.cw;
+ 	Color *fg, *bg, *temp, revfg, revbg, truefg, truebg;
+ 	XRenderColor colfg, colbg;
+@@ -1468,17 +1696,17 @@ xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len, int x, i
+ 
+ 	/* Intelligent cleaning up of the borders. */
+ 	if (x == 0) {
+-		xclear(0, (y == 0)? 0 : winy, borderpx,
++		xclear(0, (y == 0)? 0 : winy, win.hborderpx,
+ 			winy + win.ch +
+-			((winy + win.ch >= borderpx + win.th)? win.h : 0));
++			((winy + win.ch >= win.vborderpx + win.th)? win.h : 0));
+ 	}
+-	if (winx + width >= borderpx + win.tw) {
++	if (winx + width >= win.hborderpx + win.tw) {
+ 		xclear(winx + width, (y == 0)? 0 : winy, win.w,
+-			((winy + win.ch >= borderpx + win.th)? win.h : (winy + win.ch)));
++			((winy + win.ch >= win.vborderpx + win.th)? win.h : (winy + win.ch)));
+ 	}
+ 	if (y == 0)
+-		xclear(winx, 0, winx + width, borderpx);
+-	if (winy + win.ch >= borderpx + win.th)
++		xclear(winx, 0, winx + width, win.vborderpx);
++	if (winy + win.ch >= win.vborderpx + win.th)
+ 		xclear(winx, winy + win.ch, winx + width, win.h);
+ 
+ 	/* Clean up the region we want to draw to. */
+@@ -1496,8 +1724,357 @@ xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len, int x, i
+ 
+ 	/* Render underline and strikethrough. */
+ 	if (base.mode & ATTR_UNDERLINE) {
+-		XftDrawRect(xw.draw, fg, winx, winy + dc.font.ascent * chscale + 1,
+-				width, 1);
++		// Underline Color
++		const int widthThreshold  = 28; // +1 width every widthThreshold px of font
++		int wlw = (win.ch / widthThreshold) + 1; // Wave Line Width
++		int linecolor;
++		if ((base.ucolor[0] >= 0) &&
++			!(base.mode & ATTR_BLINK && win.mode & MODE_BLINK) &&
++			!(base.mode & ATTR_INVISIBLE)
++		) {
++			// Special color for underline
++			// Index
++			if (base.ucolor[1] < 0) {
++				linecolor = dc.col[base.ucolor[0]].pixel;
++			}
++			// RGB
++			else {
++				XColor lcolor;
++				lcolor.red = base.ucolor[0] * 257;
++				lcolor.green = base.ucolor[1] * 257;
++				lcolor.blue = base.ucolor[2] * 257;
++				lcolor.flags = DoRed | DoGreen | DoBlue;
++				XAllocColor(xw.dpy, xw.cmap, &lcolor);
++				linecolor = lcolor.pixel;
++			}
++		} else {
++			// Foreground color for underline
++			linecolor = fg->pixel;
++		}
++
++		XGCValues ugcv = {
++			.foreground = linecolor,
++			.line_width = wlw,
++			.line_style = LineSolid,
++			.cap_style = CapNotLast
++		};
++
++		GC ugc = XCreateGC(xw.dpy, XftDrawDrawable(xw.draw),
++			GCForeground | GCLineWidth | GCLineStyle | GCCapStyle,
++			&ugcv);
++
++		// Underline Style
++		if (base.ustyle != 3) {
++			//XftDrawRect(xw.draw, fg, winx, winy + dc.font.ascent + 1, width, 1);
++			XFillRectangle(xw.dpy, XftDrawDrawable(xw.draw), ugc, winx,
++				winy + dc.font.ascent + 1, width, wlw);
++		} else if (base.ustyle == 3) {
++			int ww = win.cw;//width;
++			int wh = dc.font.descent - wlw/2 - 1;//r.height/7;
++			int wx = winx;
++			int wy = winy + win.ch - dc.font.descent;
++
++#if UNDERCURL_STYLE == UNDERCURL_CURLY
++			// Draw waves
++			int narcs = charlen * 2 + 1;
++			XArc *arcs = xmalloc(sizeof(XArc) * narcs);
++
++			int i = 0;
++			for (i = 0; i < charlen-1; i++) {
++				arcs[i*2] = (XArc) {
++					.x = wx + win.cw * i + ww / 4,
++					.y = wy,
++					.width = win.cw / 2,
++					.height = wh,
++					.angle1 = 0,
++					.angle2 = 180 * 64
++				};
++				arcs[i*2+1] = (XArc) {
++					.x = wx + win.cw * i + ww * 0.75,
++					.y = wy,
++					.width = win.cw/2,
++					.height = wh,
++					.angle1 = 180 * 64,
++					.angle2 = 180 * 64
++				};
++			}
++			// Last wave
++			arcs[i*2] = (XArc) {wx + ww * i + ww / 4, wy, ww / 2, wh,
++			0, 180 * 64 };
++			// Last wave tail
++			arcs[i*2+1] = (XArc) {wx + ww * i + ww * 0.75, wy, ceil(ww / 2.),
++			wh, 180 * 64, 90 * 64};
++			// First wave tail
++			i++;
++			arcs[i*2] = (XArc) {wx - ww/4 - 1, wy, ceil(ww / 2.), wh, 270 * 64,
++			90 * 64 };
++
++			XDrawArcs(xw.dpy, XftDrawDrawable(xw.draw), ugc, arcs, narcs);
++
++			free(arcs);
++#elif UNDERCURL_STYLE == UNDERCURL_SPIKY
++			// Make the underline corridor larger
++			/*
++			wy -= wh;
++			*/
++			wh *= 2;
++
++			// Set the angle of the slope to 45°
++			ww = wh;
++
++			// Position of wave is independent of word, it's absolute
++			wx = (wx / (ww/2)) * (ww/2);
++
++			int marginStart = winx - wx;
++
++			// Calculate number of points with floating precision
++			float n = width;					// Width of word in pixels
++			n = (n / ww) * 2;					// Number of slopes (/ or \)
++			n += 2;								// Add two last points
++			int npoints = n;					// Convert to int
++
++			// Total length of underline
++			float waveLength = 0;
++
++			if (npoints >= 3) {
++				// We add an aditional slot in case we use a bonus point
++				XPoint *points = xmalloc(sizeof(XPoint) * (npoints + 1));
++
++				// First point (Starts with the word bounds)
++				points[0] = (XPoint) {
++					.x = wx + marginStart,
++					.y = (isSlopeRising(wx, 0, ww))
++						? (wy - marginStart + ww/2.f)
++						: (wy + marginStart)
++				};
++
++				// Second point (Goes back to the absolute point coordinates)
++				points[1] = (XPoint) {
++					.x = (ww/2.f) - marginStart,
++					.y = (isSlopeRising(wx, 1, ww))
++						? (ww/2.f - marginStart)
++						: (-ww/2.f + marginStart)
++				};
++				waveLength += (ww/2.f) - marginStart;
++
++				// The rest of the points
++				for (int i = 2; i < npoints-1; i++) {
++					points[i] = (XPoint) {
++						.x = ww/2,
++						.y = (isSlopeRising(wx, i, ww))
++							? wh/2
++							: -wh/2
++					};
++					waveLength += ww/2;
++				}
++
++				// Last point
++				points[npoints-1] = (XPoint) {
++					.x = ww/2,
++					.y = (isSlopeRising(wx, npoints-1, ww))
++						? wh/2
++						: -wh/2
++				};
++				waveLength += ww/2;
++
++				// End
++				if (waveLength < width) { // Add a bonus point?
++					int marginEnd = width - waveLength;
++					points[npoints] = (XPoint) {
++						.x = marginEnd,
++						.y = (isSlopeRising(wx, npoints, ww))
++							? (marginEnd)
++							: (-marginEnd)
++					};
++
++					npoints++;
++				} else if (waveLength > width) { // Is last point too far?
++					int marginEnd = waveLength - width;
++					points[npoints-1].x -= marginEnd;
++					if (isSlopeRising(wx, npoints-1, ww))
++						points[npoints-1].y -= (marginEnd);
++					else
++						points[npoints-1].y += (marginEnd);
++				}
++
++				// Draw the lines
++				XDrawLines(xw.dpy, XftDrawDrawable(xw.draw), ugc, points, npoints,
++						CoordModePrevious);
++
++				// Draw a second underline with an offset of 1 pixel
++				if ( ((win.ch / (widthThreshold/2)) % 2)) {
++					points[0].x++;
++
++					XDrawLines(xw.dpy, XftDrawDrawable(xw.draw), ugc, points,
++							npoints, CoordModePrevious);
++				}
++
++				// Free resources
++				free(points);
++			}
++#else // UNDERCURL_CAPPED
++			// Cap is half of wave width
++			float capRatio = 0.5f;
++
++			// Make the underline corridor larger
++			wh *= 2;
++
++			// Set the angle of the slope to 45°
++			ww = wh;
++			ww *= 1 + capRatio; // Add a bit of width for the cap
++
++			// Position of wave is independent of word, it's absolute
++			wx = (wx / ww) * ww;
++
++			float marginStart;
++			switch(getSlope(winx, 0, ww)) {
++				case UNDERCURL_SLOPE_ASCENDING:
++					marginStart = winx - wx;
++					break;
++				case UNDERCURL_SLOPE_TOP_CAP:
++					marginStart = winx - (wx + (ww * (2.f/6.f)));
++					break;
++				case UNDERCURL_SLOPE_DESCENDING:
++					marginStart = winx - (wx + (ww * (3.f/6.f)));
++					break;
++				case UNDERCURL_SLOPE_BOTTOM_CAP:
++					marginStart = winx - (wx + (ww * (5.f/6.f)));
++					break;
++			}
++
++			// Calculate number of points with floating precision
++			float n = width;					// Width of word in pixels
++												//					   ._.
++			n = (n / ww) * 4;					// Number of points (./   \.)
++			n += 2;								// Add two last points
++			int npoints = n;					// Convert to int
++
++			// Position of the pen to draw the lines
++			float penX = 0;
++			float penY = 0;
++
++			if (npoints >= 3) {
++				XPoint *points = xmalloc(sizeof(XPoint) * (npoints + 1));
++
++				// First point (Starts with the word bounds)
++				penX = winx;
++				switch (getSlope(winx, 0, ww)) {
++					case UNDERCURL_SLOPE_ASCENDING:
++						penY = wy + wh/2.f - marginStart;
++						break;
++					case UNDERCURL_SLOPE_TOP_CAP:
++						penY = wy;
++						break;
++					case UNDERCURL_SLOPE_DESCENDING:
++						penY = wy + marginStart;
++						break;
++					case UNDERCURL_SLOPE_BOTTOM_CAP:
++						penY = wy + wh/2.f;
++						break;
++				}
++				points[0].x = penX;
++				points[0].y = penY;
++
++				// Second point (Goes back to the absolute point coordinates)
++				switch (getSlope(winx, 1, ww)) {
++					case UNDERCURL_SLOPE_ASCENDING:
++						penX += ww * (1.f/6.f) - marginStart;
++						penY += 0;
++						break;
++					case UNDERCURL_SLOPE_TOP_CAP:
++						penX += ww * (2.f/6.f) - marginStart;
++						penY += -wh/2.f + marginStart;
++						break;
++					case UNDERCURL_SLOPE_DESCENDING:
++						penX += ww * (1.f/6.f) - marginStart;
++						penY += 0;
++						break;
++					case UNDERCURL_SLOPE_BOTTOM_CAP:
++						penX += ww * (2.f/6.f) - marginStart;
++						penY += -marginStart + wh/2.f;
++						break;
++				}
++				points[1].x = penX;
++				points[1].y = penY;
++
++				// The rest of the points
++				for (int i = 2; i < npoints; i++) {
++					switch (getSlope(winx, i, ww)) {
++						case UNDERCURL_SLOPE_ASCENDING:
++						case UNDERCURL_SLOPE_DESCENDING:
++							penX += ww * (1.f/6.f);
++							penY += 0;
++							break;
++						case UNDERCURL_SLOPE_TOP_CAP:
++							penX += ww * (2.f/6.f);
++							penY += -wh / 2.f;
++							break;
++						case UNDERCURL_SLOPE_BOTTOM_CAP:
++							penX += ww * (2.f/6.f);
++							penY += wh / 2.f;
++							break;
++					}
++					points[i].x = penX;
++					points[i].y = penY;
++				}
++
++				// End
++				float waveLength = penX - winx;
++				if (waveLength < width) { // Add a bonus point?
++					int marginEnd = width - waveLength;
++					penX += marginEnd;
++					switch(getSlope(winx, npoints, ww)) {
++						case UNDERCURL_SLOPE_ASCENDING:
++						case UNDERCURL_SLOPE_DESCENDING:
++							//penY += 0;
++							break;
++						case UNDERCURL_SLOPE_TOP_CAP:
++							penY += -marginEnd;
++							break;
++						case UNDERCURL_SLOPE_BOTTOM_CAP:
++							penY += marginEnd;
++							break;
++					}
++
++					points[npoints].x = penX;
++					points[npoints].y = penY;
++
++					npoints++;
++				} else if (waveLength > width) { // Is last point too far?
++					int marginEnd = waveLength - width;
++					points[npoints-1].x -= marginEnd;
++					switch(getSlope(winx, npoints-1, ww)) {
++						case UNDERCURL_SLOPE_TOP_CAP:
++							points[npoints-1].y += marginEnd;
++							break;
++						case UNDERCURL_SLOPE_BOTTOM_CAP:
++							points[npoints-1].y -= marginEnd;
++							break;
++						default:
++							break;
++					}
++				}
++
++				// Draw the lines
++				XDrawLines(xw.dpy, XftDrawDrawable(xw.draw), ugc, points, npoints,
++						CoordModeOrigin);
++
++				// Draw a second underline with an offset of 1 pixel
++				if ( ((win.ch / (widthThreshold/2)) % 2)) {
++					for (int i = 0; i < npoints; i++)
++						points[i].x++;
++
++					XDrawLines(xw.dpy, XftDrawDrawable(xw.draw), ugc, points,
++							npoints, CoordModeOrigin);
++				}
++
++				// Free resources
++				free(points);
++			}
++#endif
++		}
++
++		XFreeGC(xw.dpy, ugc);
+ 	}
+ 
+ 	if (base.mode & ATTR_STRUCK) {
+@@ -1513,21 +2090,25 @@ void
+ xdrawglyph(Glyph g, int x, int y)
+ {
+ 	int numspecs;
+-	XftGlyphFontSpec spec;
++	XftGlyphFontSpec *specs = xw.specbuf;
+ 
+-	numspecs = xmakeglyphfontspecs(&spec, &g, 1, x, y);
+-	xdrawglyphfontspecs(&spec, g, numspecs, x, y);
++	numspecs = xmakeglyphfontspecs(specs, &g, 1, x, y);
++	xdrawglyphfontspecs(specs, g, numspecs, x, y, (g.mode & ATTR_WIDE) ? 2 : 1);
+ }
+ 
+ void
+-xdrawcursor(int cx, int cy, Glyph g, int ox, int oy, Glyph og)
++xdrawcursor(int cx, int cy, Glyph g, int ox, int oy, Glyph og, Line line, int len)
+ {
+ 	Color drawcol;
++	XRenderColor colbg;
+ 
+ 	/* remove the old cursor */
+ 	if (selected(ox, oy))
+ 		og.mode ^= ATTR_REVERSE;
+-	xdrawglyph(og, ox, oy);
++
++	/* Redraw the line where cursor was previously.
++	 * It will restore the ligatures broken by the cursor. */
++	xdrawline(line, 0, oy, len);
+ 
+ 	if (IS_SET(MODE_HIDE))
+ 		return;
+@@ -1551,11 +2132,21 @@ xdrawcursor(int cx, int cy, Glyph g, int ox, int oy, Glyph og)
+ 		if (selected(cx, cy)) {
+ 			g.fg = defaultfg;
+ 			g.bg = defaultrcs;
++		} else if (!(og.mode & ATTR_REVERSE)) {
++			unsigned long col = g.bg;
++			g.bg = g.fg;
++			g.fg = col;
++		}
++
++		if (IS_TRUECOL(g.bg)) {
++			colbg.alpha = 0xffff;
++			colbg.red = TRUERED(g.bg);
++			colbg.green = TRUEGREEN(g.bg);
++			colbg.blue = TRUEBLUE(g.bg);
++			XftColorAllocValue(xw.dpy, xw.vis, xw.cmap, &colbg, &drawcol);
+ 		} else {
+-			g.fg = defaultbg;
+-			g.bg = defaultcs;
++			drawcol = dc.col[g.bg];
+ 		}
+-		drawcol = dc.col[g.bg];
+ 	}
+ 
+ 	/* draw the new one */
+@@ -1572,35 +2163,35 @@ xdrawcursor(int cx, int cy, Glyph g, int ox, int oy, Glyph og)
+ 		case 3: /* Blinking Underline */
+ 		case 4: /* Steady Underline */
+ 			XftDrawRect(xw.draw, &drawcol,
+-					borderpx + cx * win.cw,
+-					borderpx + (cy + 1) * win.ch - \
++					win.hborderpx + cx * win.cw,
++					win.vborderpx + (cy + 1) * win.ch - \
+ 						cursorthickness,
+ 					win.cw, cursorthickness);
+ 			break;
+ 		case 5: /* Blinking bar */
+ 		case 6: /* Steady bar */
+ 			XftDrawRect(xw.draw, &drawcol,
+-					borderpx + cx * win.cw,
+-					borderpx + cy * win.ch,
++					win.hborderpx + cx * win.cw,
++					win.vborderpx + cy * win.ch,
+ 					cursorthickness, win.ch);
+ 			break;
+ 		}
+ 	} else {
+ 		XftDrawRect(xw.draw, &drawcol,
+-				borderpx + cx * win.cw,
+-				borderpx + cy * win.ch,
++				win.hborderpx + cx * win.cw,
++				win.vborderpx + cy * win.ch,
+ 				win.cw - 1, 1);
+ 		XftDrawRect(xw.draw, &drawcol,
+-				borderpx + cx * win.cw,
+-				borderpx + cy * win.ch,
++				win.hborderpx + cx * win.cw,
++				win.vborderpx + cy * win.ch,
+ 				1, win.ch - 1);
+ 		XftDrawRect(xw.draw, &drawcol,
+-				borderpx + (cx + 1) * win.cw - 1,
+-				borderpx + cy * win.ch,
++				win.hborderpx + (cx + 1) * win.cw - 1,
++				win.vborderpx + cy * win.ch,
+ 				1, win.ch - 1);
+ 		XftDrawRect(xw.draw, &drawcol,
+-				borderpx + cx * win.cw,
+-				borderpx + (cy + 1) * win.ch - 1,
++				win.hborderpx + cx * win.cw,
++				win.vborderpx + (cy + 1) * win.ch - 1,
+ 				win.cw, 1);
+ 	}
+ }
+@@ -1661,28 +2252,28 @@ xdrawline(Line line, int x1, int y1, int x2)
+ 	Glyph base, new;
+ 	XftGlyphFontSpec *specs = xw.specbuf;
+ 
+-	numspecs = xmakeglyphfontspecs(specs, &line[x1], x2 - x1, x1, y1);
+ 	i = ox = 0;
+-	for (x = x1; x < x2 && i < numspecs; x++) {
++	for (x = x1; x < x2; x++) {
+ 		new = line[x];
+ 		if (new.mode == ATTR_WDUMMY)
+ 			continue;
+ 		if (selected(x, y1))
+ 			new.mode ^= ATTR_REVERSE;
+-		if (i > 0 && ATTRCMP(base, new)) {
+-			xdrawglyphfontspecs(specs, base, i, ox, y1);
+-			specs += i;
+-			numspecs -= i;
++		if ((i > 0) && ATTRCMP(base, new)) {
++			numspecs = xmakeglyphfontspecs(specs, &line[ox], x - ox, ox, y1);
++			xdrawglyphfontspecs(specs, base, numspecs, ox, y1, x - ox);
+ 			i = 0;
+-		}
++    }
+ 		if (i == 0) {
+ 			ox = x;
+ 			base = new;
+ 		}
+ 		i++;
+ 	}
+-	if (i > 0)
+-		xdrawglyphfontspecs(specs, base, i, ox, y1);
++	if (i > 0) {
++		numspecs = xmakeglyphfontspecs(specs, &line[ox], x2 - ox, ox, y1);
++		xdrawglyphfontspecs(specs, base, numspecs, ox, y1, x2 - ox);
++	}
+ }
+ 
+ void
+@@ -2023,6 +2614,59 @@ run(void)
+ 	}
+ }
+ 
++int
++resource_load(XrmDatabase db, char *name, enum resource_type rtype, void *dst)
++{
++	char **sdst = dst;
++	int *idst = dst;
++	float *fdst = dst;
++
++	char fullname[256];
++	char fullclass[256];
++	char *type;
++	XrmValue ret;
++
++	snprintf(fullname, sizeof(fullname), "%s.%s",
++			opt_name ? opt_name : "st", name);
++	snprintf(fullclass, sizeof(fullclass), "%s.%s",
++			opt_class ? opt_class : "St", name);
++	fullname[sizeof(fullname) - 1] = fullclass[sizeof(fullclass) - 1] = '\0';
++
++	XrmGetResource(db, fullname, fullclass, &type, &ret);
++	if (ret.addr == NULL || strncmp("String", type, 64))
++		return 1;
++
++	switch (rtype) {
++	case STRING:
++		*sdst = ret.addr;
++		break;
++	case INTEGER:
++		*idst = strtoul(ret.addr, NULL, 10);
++		break;
++	case FLOAT:
++		*fdst = strtof(ret.addr, NULL);
++		break;
++	}
++	return 0;
++}
++
++void
++config_init(void)
++{
++	char *resm;
++	XrmDatabase db;
++	ResourcePref *p;
++
++	XrmInitialize();
++	resm = XResourceManagerString(xw.dpy);
++	if (!resm)
++		return;
++
++	db = XrmGetStringDatabase(resm);
++	for (p = resources; p < resources + LEN(resources); p++)
++		resource_load(db, p->name, p->type, p->dst);
++}
++
+ void
+ usage(void)
+ {
+@@ -2047,6 +2691,10 @@ main(int argc, char *argv[])
+ 	case 'a':
+ 		allowaltscreen = 0;
+ 		break;
++	case 'A':
++		alpha = strtof(EARGF(usage()), NULL);
++		LIMIT(alpha, 0.0, 1.0);
++		break;
+ 	case 'c':
+ 		opt_class = EARGF(usage());
+ 		break;
+@@ -2096,6 +2744,11 @@ run:
+ 
+ 	setlocale(LC_CTYPE, "");
+ 	XSetLocaleModifiers("");
++
++	if(!(xw.dpy = XOpenDisplay(NULL)))
++		die("Can't open display\n");
++
++	config_init();
+ 	cols = MAX(cols, 1);
+ 	rows = MAX(rows, 1);
+ 	tnew(cols, rows);

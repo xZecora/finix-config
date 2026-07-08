@@ -1,0 +1,160 @@
+#GENERAL#
+startup_message off
+#set padding 50 24 0 0
+set padding 0 24 0 0
+set border 3
+set onlyborder 0
+set warp 0
+
+#UNBINDS#
+unbind Return
+unbind K
+unbind k
+unbind l
+unbind f
+unbind C-r
+unbind C-s
+unbind C-S
+unbind C-A
+unbind C-K
+unbind C-k
+unbind C-Return
+unbind C-a
+unbind a
+unbind C-b
+unbind c
+unbind C-c
+unbind C-exclam
+unbind C-i
+unbind C-m
+unbind C-n
+unbind C-p
+unbind C-apostrophe
+unbind C-space
+unbind C-underscore
+unbind C-u
+unbind C-v
+unbind C-V
+unbind C-w
+unbind C-x
+unbind Left
+unbind C-Left
+unbind Right
+unbind C-Right
+unbind Up
+unbind C-Up
+unbind Down
+unbind C-Down
+unbind F
+unbind R
+
+#PREFIX KEY#
+escape S-space
+bind space next
+
+bind Escape abort
+
+#TERMINAL KEYBINDS#
+bind grave exec st
+bind Return exec st
+bind S-Return exec st -e ssh 192.168.0.231
+
+# KEYBINDS #
+unbind e
+unbind i
+bind e focusdown
+bind i focusup
+bind n focusleft
+bind o focusright
+bind E exchangedown
+bind I exchangeup
+bind N exchangeleft
+bind O exchangeright
+bind C-n prevscreen
+bind C-o nextscreen
+bind X quit
+bind F remove
+bind C-R restart
+bind C-F curfram
+bind d exec menu.sh
+bind D exec powermenu.sh
+bind v exec vesktop
+bind s hsplit
+bind S split
+bind f exec floorp
+#bind t exec thunderbird
+bind b exec fullscreentoggle
+bind B exec barrattoggle
+bind q kill
+bind Q kill
+bind g exec sinkswitch
+#bind bracketleft tmpwm qpwm
+bind M-S-space swap
+bind Y exec emoji.sh
+bind y exec greek.sh
+bind semicolon tmpwm dwm
+bind L exec tv
+bind t exec clock
+bind T exec viewtextbook
+
+bind slash exec st -e rmpc
+bind less exec playerctl volume .05-
+bind greater exec playerctl volume .05+
+bind comma exec playerctl previous
+bind period exec playerctl next
+bind braceright exec mpc-add-current-to-playlist.sh
+bind bar exec ~/.local/bin/audio/album-artist-play.sh -S
+bind quotedbl exec ~/.local/bin/audio/player-select.sh
+bind backslash exec playerctl play-pause
+
+#WORKPSACESWAPPING#
+bind 1 exec rpws 1
+bind 2 exec rpws 2
+bind 3 exec rpws 3
+bind 4 exec rpws 4
+bind 5 exec rpws 5
+bind 6 exec rpws 6
+bind 7 exec rpws 7
+bind 8 exec rpws 8
+bind 9 exec rpws 9
+bind 0 exec rpws 10
+
+bind F1 exec rpws move1
+bind F2 exec rpws move2
+bind F3 exec rpws move3
+bind F4 exec rpws move4
+bind F5 exec rpws move5
+bind F6 exec rpws move6
+bind F7 exec rpws move7
+bind F8 exec rpws move8
+bind F9 exec rpws move9
+bind F10 exec rpws move10
+
+#EYECANDY#
+set fgcolor #282828
+set bgcolor #d3869b
+set fwcolor #b16286
+set bwcolor #689d6a
+
+#STARTUP#
+# exec /home/vitrial/.local/bin/monitor-layout
+# exec nitrogen --restore
+exec /home/vitrial/.local/bin/panel.sh
+exec dunst
+# exec gamemoded
+exec xsetroot -cursor_name left_ptr
+# exec export XDG_RUNTIME_DIR=/home/vitrial/.cache/xdg
+# exec export QT_QPA_PLATFORMTHEME=qt5ct
+# exec steam -silent
+exec rpws init 10 -k
+exec xset -dpms
+exec xset s 0 0
+exec /home/vitrial/.local/bin/idle.sh
+
+# exec mpd-mpris &
+# exec playerctld &
+
+# audio controllers and daemons
+# exec playerctld daemon
+# exec mpd-mpris
+# exec spotifyd --bitrate 320 --use-mpris=true --device-type computer --zeroconf-port 2929

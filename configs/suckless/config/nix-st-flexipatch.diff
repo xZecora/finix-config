@@ -1,0 +1,219 @@
+diff --git a/config.def.h b/config.def.h
+index 7baab30..29c6d5c 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -5,12 +5,11 @@
+  *
+  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
+  */
+-static char *font = "Liberation Mono:pixelsize=12:antialias=true:autohint=true";
++static char *font = "FiraCode Nerd Font Mono:pixelsize=15:antialias=true:autohint=true";
+ #if FONT2_PATCH
+ /* Spare fonts */
+ static char *font2[] = {
+-/*	"Inconsolata for Powerline:pixelsize=12:antialias=true:autohint=true", */
+-/*	"Hack Nerd Font Mono:pixelsize=11:antialias=true:autohint=true", */
++                    "Noto Color Emoji:pixelsize=15:antialias=true:autohint=true"
+ };
+ #endif // FONT2_PATCH
+ 
+@@ -161,7 +160,7 @@ char *termname = "st-256color";
+  *
+  *	stty tabs
+  */
+-unsigned int tabspaces = 8;
++unsigned int tabspaces = 2;
+ 
+ #if ALPHA_PATCH
+ /* bg opacity */
+@@ -422,9 +421,9 @@ static Shortcut shortcuts[] = {
+ 	{ ControlMask,          XK_Print,       toggleprinter,   {.i =  0} },
+ 	{ ShiftMask,            XK_Print,       printscreen,     {.i =  0} },
+ 	{ XK_ANY_MOD,           XK_Print,       printsel,        {.i =  0} },
+-	{ TERMMOD,              XK_Prior,       zoom,            {.f = +1} },
+-	{ TERMMOD,              XK_Next,        zoom,            {.f = -1} },
+-	{ TERMMOD,              XK_Home,        zoomreset,       {.f =  0} },
++	{ TERMMOD,              XK_I,           zoom,            {.f = +1} },
++	{ TERMMOD,              XK_E,           zoom,            {.f = -1} },
++	{ TERMMOD,              XK_N,           zoomreset,       {.f =  0} },
+ 	{ TERMMOD,              XK_C,           clipcopy,        {.i =  0} },
+ 	{ TERMMOD,              XK_V,           clippaste,       {.i =  0} },
+ 	#if ALPHA_PATCH
+diff --git a/config.mk b/config.mk
+index a3b94cd..8499efa 100644
+--- a/config.mk
++++ b/config.mk
+@@ -15,16 +15,16 @@ X11LIB = /usr/X11R6/lib
+ PKG_CONFIG = pkg-config
+ 
+ # Uncomment this for the alpha patch / ALPHA_PATCH
+-#XRENDER = `$(PKG_CONFIG) --libs xrender`
++XRENDER = `$(PKG_CONFIG) --libs xrender`
+ 
+ # Uncomment this for the themed cursor patch / THEMED_CURSOR_PATCH
+ #XCURSOR = `$(PKG_CONFIG) --libs xcursor`
+ 
+ # Uncomment the lines below for the ligatures patch / LIGATURES_PATCH
+-#LIGATURES_C = hb.c
+-#LIGATURES_H = hb.h
+-#LIGATURES_INC = `$(PKG_CONFIG) --cflags harfbuzz`
+-#LIGATURES_LIBS = `$(PKG_CONFIG) --libs harfbuzz`
++LIGATURES_C = hb.c
++LIGATURES_H = hb.h
++LIGATURES_INC = `$(PKG_CONFIG) --cflags harfbuzz`
++LIGATURES_LIBS = `$(PKG_CONFIG) --libs harfbuzz`
+ 
+ # Uncomment this for the SIXEL patch / SIXEL_PATCH
+ #SIXEL_C = sixel.c sixel_hls.c
+diff --git a/patches.def.h b/patches.def.h
+index 7bf33cc..bd92810 100644
+--- a/patches.def.h
++++ b/patches.def.h
+@@ -14,7 +14,7 @@
+  * when including this patch.
+  * https://st.suckless.org/patches/alpha/
+  */
+-#define ALPHA_PATCH 0
++#define ALPHA_PATCH 1
+ 
+ /* The alpha focus highlight patch allows the user to specify two distinct opacity values or
+  * background colors in order to easily differentiate between focused and unfocused terminal
+@@ -44,7 +44,7 @@
+ /* A simple variant of the anysize patch that only changes the resize hints to allow the window to
+  * be resized to any size.
+  */
+-#define ANYSIZE_SIMPLE_PATCH 0
++#define ANYSIZE_SIMPLE_PATCH 1
+ 
+ /* Draws a background image in farbfeld format in place of the defaultbg color allowing for pseudo
+  * transparency.
+@@ -64,7 +64,7 @@
+  *    https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h4-Functions-using-CSI-_-ordered-by-the-final-character-lparen-s-rparen:CSI-Ps-SP-q.1D81
+  * https://st.suckless.org/patches/blinking_cursor/
+  */
+-#define BLINKING_CURSOR_PATCH 0
++#define BLINKING_CURSOR_PATCH 1
+ 
+ /* By default bold text is rendered with a bold font in the bright variant of the current color.
+  * This patch makes bold text rendered simply as bold, leaving the color unaffected.
+@@ -127,7 +127,7 @@
+ /* Return BS on pressing backspace and DEL on pressing the delete key.
+  * https://st.suckless.org/patches/delkey/
+  */
+-#define DELKEY_PATCH 0
++#define DELKEY_PATCH 1
+ 
+ /* This patch adds the option of disabling bold fonts globally.
+  * https://st.suckless.org/patches/disable_bold_italic_fonts/
+@@ -147,12 +147,12 @@
+ /* Allows dragging a file into the terminal and have the path printed.
+  * https://st.suckless.org/patches/drag-n-drop
+  */
+-#define DRAG_AND_DROP_PATCH 0
++#define DRAG_AND_DROP_PATCH 1
+ 
+ /* This patch makes the cursor color the inverse of the current cell color.
+  * https://st.suckless.org/patches/dynamic-cursor-color/
+  */
+-#define DYNAMIC_CURSOR_COLOR_PATCH 0
++#define DYNAMIC_CURSOR_COLOR_PATCH 1
+ 
+ /* This is a variant of the anysize patch that explicitly do not change the size increment hints,
+  * i.e. only keeping the dynamic padding which is the main thing the anysize patch introduces.
+@@ -163,7 +163,7 @@
+  *
+  * Note that this patch depends on ANYSIZE_PATCH being enabled to have an effect.
+  */
+-#define DYNAMIC_PADDING_PATCH 0
++#define DYNAMIC_PADDING_PATCH 1
+ 
+ /* Reading and writing st's screen through a pipe, e.g. pass info to dmenu.
+  * https://st.suckless.org/patches/externalpipe/
+@@ -200,7 +200,7 @@
+  * So they will be used first for glyphs that are absent in the default font.
+  * https://st.suckless.org/patches/font2/
+  */
+-#define FONT2_PATCH 0
++#define FONT2_PATCH 1
+ 
+ /* This patch adds the ability to toggle st into fullscreen mode.
+  * Two key bindings are defined: F11 which is typical with other applications and Alt+Enter
+@@ -249,7 +249,7 @@
+  * https://github.com/cog1to/st-ligatures
+  * https://st.suckless.org/patches/ligatures/
+  */
+-#define LIGATURES_PATCH 0
++#define LIGATURES_PATCH 1
+ 
+ /* This patch makes st ignore terminal color attributes by forcing display of the default
+  * foreground and background colors only - making for a monochrome look. Idea ref.
+@@ -320,7 +320,7 @@
+  *
+  * https://www.reddit.com/r/suckless/comments/cc83om/st_open_url/
+  */
+-#define OPENURLONCLICK_PATCH 0
++#define OPENURLONCLICK_PATCH 1
+ 
+ /* This patch allows st to fetch the current working directory through the OSC 7 escape
+  * sequence emitted by shells. Must be used with newterm patch.
+@@ -342,13 +342,13 @@
+  * Text wraps when the terminal window is made smaller.
+  * Comes with scrollback.
+  */
+-#define REFLOW_PATCH 0
++#define REFLOW_PATCH 1
+ 
+ /* This patch allows you to specify a border that is relative in size to the width of a cell
+  * in the terminal.
+  * https://st.suckless.org/patches/relativeborder/
+  */
+-#define RELATIVEBORDER_PATCH 0
++#define RELATIVEBORDER_PATCH 1
+ 
+ /* This patch allows you to right-click on some selected text to send it to the plumbing
+  * program of choice, e.g. open a file, view an image, open a URL.
+@@ -359,7 +359,7 @@
+ /* Scroll back through terminal output using Shift+{PageUp, PageDown}.
+  * https://st.suckless.org/patches/scrollback/
+  */
+-#define SCROLLBACK_PATCH 0
++#define SCROLLBACK_PATCH 1
+ 
+ /* Scroll back through terminal output using Shift+MouseWheel.
+  * This variant depends on SCROLLBACK_PATCH being enabled.
+@@ -371,7 +371,7 @@
+  * This variant depends on SCROLLBACK_PATCH being enabled.
+  * https://st.suckless.org/patches/scrollback/
+  */
+-#define SCROLLBACK_MOUSE_ALTSCREEN_PATCH 0
++#define SCROLLBACK_MOUSE_ALTSCREEN_PATCH 1
+ 
+ /* This patch adds the two color-settings selectionfg and selectionbg to config.def.h.
+  * Those define the fore- and background colors which are used when text on the screen is selected
+@@ -465,7 +465,7 @@
+  *
+  * https://st.suckless.org/patches/undercurl/
+  */
+-#define UNDERCURL_PATCH 0
++#define UNDERCURL_PATCH 1
+ 
+ /* Allows mouse scroll without modifier keys for regardless of alt screen using the external
+  * scroll program.
+@@ -507,7 +507,7 @@
+  * https://github.com/Dreomite/st/commit/e3b821dcb3511d60341dec35ee05a4a0abfef7f2
+  * https://www.reddit.com/r/suckless/comments/jt90ai/update_support_for_proper_glyph_rendering_in_st/
+  */
+-#define WIDE_GLYPHS_PATCH 0
++#define WIDE_GLYPHS_PATCH 1
+ 
+ /* There is a known issue that Google's Variable Fonts (VF) can end up with letter spacing
+  * that is too wide in programs that use Xft, for example Inconsolata v3.000.
+@@ -528,7 +528,7 @@
+  * apply the resources named in the resources[] array in config.h.
+  * https://st.suckless.org/patches/xresources/
+  */
+-#define XRESOURCES_PATCH 0
++#define XRESOURCES_PATCH 1
+ 
+ /* This patch adds the ability to reload the Xresources config when a SIGUSR1 signal is received
+  * e.g.: killall -USR1 st
