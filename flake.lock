@@ -70,11 +70,11 @@
     },
     "community": {
       "locked": {
-        "lastModified": 1782949255,
-        "narHash": "sha256-D9bKvcQYoIfc6CX/0lMSA+eXKRceSaMPl2MAFsQrhH0=",
+        "lastModified": 1783524465,
+        "narHash": "sha256-w3DBOcC4YAL78d88VlrIQNkOGlHBlD+kHYRBVAnf03I=",
         "owner": "finix-community",
         "repo": "community-modules",
-        "rev": "ec1481258f01a02ff895a8ef333f5ba627fde003",
+        "rev": "847f3fec61efdc16c3b7b543636830b9f7eed395",
         "type": "github"
       },
       "original": {

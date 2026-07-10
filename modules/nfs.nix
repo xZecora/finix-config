@@ -81,20 +81,20 @@ in
             ];
           };
         }
-        {
-          nfs-timer = {
-            description = "nfsd mounting daemon for nfs client";
-            command = "sleep 15";
-            conditions = "task/nfs-rpc-idmapd/success";
-            log = false;
-          };
-        }
+        # {
+        #   nfs-timer = {
+        #     description = "nfsd mounting daemon for nfs client";
+        #     command = "sleep 10";
+        #     conditions = "task/nfs-rpc-idmapd/success";
+        #     log = false;
+        #   };
+        # }
         {
           nfs-rpcbind = {
             # type = "forking";
             description = "rpcbind daemon for nfs client";
             command = "${pkgs.rpcbind}/bin/rpcbind";
-            conditions = "service/syslogd/ready";
+            # conditions = "service/syslogd/ready";
             # conditions = "net/eth0/running";
             log = true;
             path = [ pkgs.rpcbind ];
@@ -117,12 +117,14 @@ in
           lib.attrsets.nameValuePair "nfs-mount-${lib.lists.last (lib.strings.split "/" "${n}")}" {
             description = "nfs mounting task for ${n}";
             command = pkgs.writeShellScript "nfs-mount-${lib.lists.last (lib.strings.split "/" "${n}")}" ''
+              while [ "$(ip a show dev eth0 down)" != "" ]; do continue; done;
               mount -t nfs ${n} && sleep infinity
             '';
             post = "\"umount ${n}\"";
-            # command = "mount -t nfs ${v.device}";
-            conditions = "task/nfs-timer/success";
-            log = true;
+            # conditions = "task/nfs-timer/success";
+            # conditions = "net/eth0/running";
+            conditions = "task/iproute2-static/success";
+            log = false;
             path = [
               pkgs.nfs-utils
               pkgs.mount

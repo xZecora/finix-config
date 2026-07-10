@@ -87,6 +87,7 @@
           {
             hjem.extraModules = [
               ./modules/hjem/dinit
+              ./modules/hjem/pointer
             ];
           }
 

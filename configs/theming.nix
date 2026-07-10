@@ -1,4 +1,5 @@
-{ pkgs, ... }: {
+{ pkgs, ... }:
+{
   # nixpkgs.config.qt6 = {
   #   enable = true;
   #   platformTheme = "qt6ct";
@@ -40,6 +41,12 @@
       defaultFonts.monospace = [ "FiraCode Nerd Font Mono" ];
       enable = true;
     };
+  };
+
+  hjem.users.vitrial.pointer = {
+    enable = true;
+    package = pkgs.everforest-cursors;
+    name = "everforest-cursors-light";
   };
 
   hardware.console = {

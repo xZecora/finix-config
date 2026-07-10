@@ -24,6 +24,7 @@
     ../configs/gaming
     ../configs/hjem
     ../configs/music
+    ../configs/nh.nix
   ];
 
   # Use latest kernel.
@@ -105,7 +106,7 @@
       requirePassword = false;
     };
 
-    # fish.enable = true;
+    # plymouth.enable = true;
   };
 
   services = {
@@ -117,9 +118,7 @@
 
     dbus.enable = true;
 
-    keventd.enable = true;
-
-    # dhcpcd.enable = true;
+    gardendevd.enable = true;
 
     nix-daemon = {
       enable = true;
@@ -204,6 +203,8 @@
     mpd-mpris
     playerctl
     mpc
+    htop
+    xdg-utils
   ];
 
   security.pam.services = lib.mkMerge [
@@ -212,11 +213,12 @@
     }
   ];
 
-  # xdg.mime.defaultApplications = {
-  #   "text/html" = "org.qutebrowser.qutebrowser.desktop";
-  #   "x-scheme-handler/http" = "org.qutebrowser.qutebrowser.desktop";
-  #   "x-scheme-handler/https" = "org.qutebrowser.qutebrowser.desktop";
-  #   "x-scheme-handler/about" = "org.qutebrowser.qutebrowser.desktop";
-  #   "x-scheme-handler/unknown" = "org.qutebrowser.qutebrowser.desktop";
-  # };
+  hjem.users.vitrial.xdg.mime-apps.default-applications = {
+    "text/html" = "userapp-Floorp-Q6EKR3.desktop";
+    "www-browser" = "userapp-Floorp-Q6EKR3.desktop";
+    "x-scheme-handler/http" = "userapp-Floorp-Q6EKR3.desktop";
+    "x-scheme-handler/https" = "userapp-Floorp-Q6EKR3.desktop";
+    "x-scheme-handler/about" = "userapp-Floorp-Q6EKR3.desktop";
+    "x-scheme-handler/unknown" = "userapp-Floorp-Q6EKR3.desktop";
+  };
 }
