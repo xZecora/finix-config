@@ -31,14 +31,15 @@
         command = "${lib.getExe' pkgs.mpd-mpris "mpd-mpris"} -no-instance";
         restart = true;
         prepared-by = [ "mpd" ];
-        depends-ms = [ "dbus-session-address" ];
+        depends-on = [ "mpd" ];
+        after = [ "dbus-session-address" ];
       };
 
       playerctld = {
         type = "process";
         command = "${lib.getExe' pkgs.playerctl "playerctld"}";
         restart = true;
-        depends-ms = [ "dbus-session-address" ];
+        after = [ "dbus-session-address" ];
       };
     };
   };

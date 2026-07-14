@@ -25,6 +25,7 @@
     ../configs/hjem
     ../configs/music
     ../configs/nh.nix
+    ../configs/acpid.nix
   ];
 
   # Use latest kernel.
@@ -32,7 +33,7 @@
   boot = {
     loader.efi.canTouchEfiVariables = true;
 
-    kernelPackages = pkgs.linuxPackages_xanmod_latest;
+    # kernelPackages = pkgs.linuxPackages;
 
     kernelParams = [
       # "loglevel=2"

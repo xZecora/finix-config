@@ -41,6 +41,9 @@
           foldmethod = "manual";
         };
 
+        # Build fix
+        diagnostics.presets.cpplint.enable = lib.mkForce false;
+
         clipboard = {
           enable = true;
           registers = "unnamedplus";
@@ -285,8 +288,8 @@
             package = vimtex;
             setup = ''
               vim.g.vimtex_view_method = "zathura"
-                                    vim.g.vimtex_quickfix_mode = 0
-                                    vim.g.vimtex_matchparan_enabled = 0'';
+              vim.g.vimtex_quickfix_mode = 0
+              vim.g.vimtex_matchparan_enabled = 0'';
           };
           omnisharp-extended-lsp-nvim = {
             package = omnisharp-extended-lsp-nvim;
