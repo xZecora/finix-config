@@ -173,7 +173,6 @@
       "video"
       "input"
       "audio"
-      # "gamemode"
       "pipewire"
     ];
     shell = pkgs.fish;
