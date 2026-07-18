@@ -18,6 +18,8 @@
 
     ../configs/network.nix
 
+    ../configs/bin
+
     # ../configs/stylix.nix
 
     # Experimental #
@@ -111,6 +113,8 @@
   };
 
   services = {
+    mullvad-vpn.enable = true;
+
     openssh.enable = true;
 
     polkit.enable = true;
@@ -142,7 +146,13 @@
 
     turnstile = {
       enable = true;
-      settings.manage_rundir = "yes";
+
+      package = pkgs.callPackage ../packages/turnstile/package.nix { };
+
+      settings = {
+        manage_rundir = true;
+        backend = "dinit";
+      };
     };
 
   };
@@ -205,6 +215,10 @@
     mpc
     htop
     xdg-utils
+    maim
+    surf
+    tabbed
+    mullvad
   ];
 
   security.pam.services = lib.mkMerge [
@@ -213,12 +227,16 @@
     }
   ];
 
-  hjem.users.vitrial.xdg.mime-apps.default-applications = {
-    "text/html" = "userapp-Floorp-Q6EKR3.desktop";
-    "www-browser" = "userapp-Floorp-Q6EKR3.desktop";
-    "x-scheme-handler/http" = "userapp-Floorp-Q6EKR3.desktop";
-    "x-scheme-handler/https" = "userapp-Floorp-Q6EKR3.desktop";
-    "x-scheme-handler/about" = "userapp-Floorp-Q6EKR3.desktop";
-    "x-scheme-handler/unknown" = "userapp-Floorp-Q6EKR3.desktop";
+  security.pam.environment = {
+    BROWSER.default = "floorp";
   };
+
+  # hjem.users.vitrial.xdg.mime-apps.default-applications = {
+  #   "text/html" = "userapp-Floorp-Q6EKR3.desktop";
+  #   "www-browser" = "userapp-Floorp-Q6EKR3.desktop";
+  #   "x-scheme-handler/http" = "userapp-Floorp-Q6EKR3.desktop";
+  #   "x-scheme-handler/https" = "userapp-Floorp-Q6EKR3.desktop";
+  #   "x-scheme-handler/about" = "userapp-Floorp-Q6EKR3.desktop";
+  #   "x-scheme-handler/unknown" = "userapp-Floorp-Q6EKR3.desktop";
+  # };
 }

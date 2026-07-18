@@ -9,7 +9,6 @@
         rev = "ce504573d0fba602678c79a650830ee74e9e35ca";
         sha256 = "sha256-1PN/71sfu1LoFDxyDzG3JzSTqusbt18zrMG6Qbgucaw=";
       };
-      #buildInputs = with pkgs; [ xorg.libX11 xorg.libXinerama libxft cmake ];
 
       patches = [ ./config/nix-dmenu.diff ];
     }))
@@ -26,14 +25,14 @@
         libxft
       ];
     }))
-    #(pkgs.st.overrideAttrs (_: {
-    #  src = pkgs.fetchgit {
-    #    url = "https://git.suckless.org/st";
-    #    rev = "688f70add0d1da8a416bf7df763328d694a24a3a";
-    #    sha256 = "sha256-PUMhcvPy63G9qQ3S8kTBLXf4RmPlPDRA61c35tspBu4=";
-    #  };
-    #  patches = [ ./config/nix-st.diff ];
-    #  buildInputs = [ harfbuzz freetype libxft ];
-    #}))
+    # (pkgs.surf.overrideAttrs (_: {
+    #   src = pkgs.fetchgit {
+    #     url = "https://github.com/bakkeby/surf-flexipatch";
+    #     rev = "f8c70da1cea810d584d533ff2e56fcd14b0438a2";
+    #     sha256 = "sha256-bK8PxuH+FBM/WNlVeRY44tKOiMcfTQfT2g6zayLdJCE=";
+    #   };
+    #
+    #   patches = [ ./config/nix-surf-flexipatch.diff ];
+    # }))
   ];
 }

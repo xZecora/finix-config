@@ -53,6 +53,7 @@ in
         '';
         conditions = "net/${cfg.interface}/exist";
         log = true;
+        runlevels = "12345789";
         path = [
           cfg.package
         ];

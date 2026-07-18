@@ -5,14 +5,15 @@
     # Nixpkgs input #
     # nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     # change this ASAP
-    nixpkgs.url = "github:nixos/nixpkgs/8defe4fe0f6d05410c753b2d8c63e40622ee7317";
+    nixpkgs.url = "github:nixos/nixpkgs/ee8b23cf07c1d80f28656c20222d2c29aa44f06d";
 
     # Finix inputs #
     # finix.url = "github:finix-community/finix";
     finix.url = "git+file:///home/vitrial/.local/src/nix/finix";
     # finix.url = "github:finix-community/finix/intrd";
     finix-local.url = "git+file:///home/vitrial/.local/src/nix/finix";
-    community.url = "github:finix-community/community-modules";
+    # community.url = "github:finix-community/community-modules/turnstiled";
+    community.url = "git+file:///home/vitrial/.local/src/nix/cmUpstream";
     community-local.url = "git+file:///home/vitrial/.local/src/nix/community-modules";
 
     # Module inputs #
@@ -84,7 +85,7 @@
           wireplumber
 
           # nvf env variables stub
-          ./modules/environment
+          # ./modules/environment
 
           nvf.nixosModules.default
 
@@ -92,22 +93,22 @@
 
           {
             hjem.extraModules = [
-              ./modules/hjem/dinit
+              community-local.hjemModules.dinit
               ./modules/hjem/pointer
+              ./modules/hjem/bin
             ];
           }
 
-          # stylix.nixosModules.stylix
-
           # Experimental #
-          # ./modules/fish
-          clModules.turnstile
+          cModules.turnstile
           # ./modules/gamemode
           ./modules/console.nix
 
           ./modules/network.nix
 
           ./modules/nfs.nix
+
+          ./modules/mullvad.nix
         ];
 
         specialArgs = {

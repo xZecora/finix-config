@@ -66,7 +66,7 @@
         "defaults"
         "_netdev"
         "hard"
-        "noauto"
+        # "noauto"
       ];
     };
 
@@ -77,7 +77,7 @@
         "defaults"
         "_netdev"
         "hard"
-        "noauto"
+        # "noauto"
       ];
     };
 
@@ -88,7 +88,7 @@
         "defaults"
         "_netdev"
         "hard"
-        "noauto"
+        # "noauto"
       ];
     };
 
@@ -99,7 +99,7 @@
         "defaults"
         "_netdev"
         "hard"
-        "noauto"
+        # "noauto"
       ];
     };
 
@@ -110,7 +110,7 @@
         "defaults"
         "_netdev"
         "hard"
-        "noauto"
+        # "noauto"
       ];
     };
 
@@ -121,7 +121,7 @@
         "defaults"
         "_netdev"
         "hard"
-        "noauto"
+        # "noauto"
       ];
     };
 
@@ -132,7 +132,7 @@
         "defaults"
         "_netdev"
         "hard"
-        "noauto"
+        # "noauto"
       ];
     };
 
@@ -143,7 +143,7 @@
         "defaults"
         "_netdev"
         "hard"
-        "noauto"
+        # "noauto"
       ];
     };
 
@@ -154,7 +154,7 @@
         "defaults"
         "_netdev"
         "hard"
-        "noauto"
+        # "noauto"
       ];
     };
 
@@ -165,7 +165,7 @@
         "defaults"
         "_netdev"
         "hard"
-        "noauto"
+        # "noauto"
       ];
     };
   };

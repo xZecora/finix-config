@@ -23,6 +23,8 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    boot.kernelModules = [ "nfs" ];
+
     boot.supportedFilesystems.nfs.packages = [
       pkgs.nfs-utils
       pkgs.rpcbind
@@ -56,7 +58,32 @@ in
     '';
 
     finit = {
-      tasks = lib.mkMerge [
+      run = lib.mkMerge [
+        (lib.attrsets.mapAttrs' (
+          n: _:
+          lib.attrsets.nameValuePair "nfs-mount-${lib.lists.last (lib.strings.split "/" "${n}")}" {
+            description = "nfs mounting task for ${n}";
+            command = pkgs.writeShellScript "nfs-mount-${lib.lists.last (lib.strings.split "/" "${n}")}" ''
+              while [ "$(ip a show dev eth0 down)" != "" ]; do continue; done;
+              mount -t nfs ${n}
+            '';
+            # post = "\"umount ${n}\"";
+            # conditions = "task/nfs-timer/success";
+            # conditions = "net/eth0/running";
+            conditions = [
+              "task/iproute2-static/success"
+              "run/nfs-rpc-idmapd/success"
+            ];
+            log = false;
+            runlevels = "12345789";
+            path = [
+              pkgs.nfs-utils
+              pkgs.mount
+              config.programs.coreutils.package
+            ];
+          }
+        ) (lib.attrsets.filterAttrs (_: v: v.fsType == "nfs") config.fileSystems))
+
         {
           nfs-rpc-pipefs = {
             description = "rpc_pipefs daemon for nfs client";
@@ -67,18 +94,20 @@ in
               pkgs.nfs-utils
               pkgs.mount
             ];
+            runlevels = "12345789";
           };
         }
         {
           nfs-rpc-nfsd = {
             description = "nfsd mounting daemon for nfs client";
             command = "mount -t nfsd nfsd /proc/fs/nfsd";
-            conditions = "task/nfs-rpc-pipefs/success";
+            conditions = "run/nfs-rpc-pipefs/success";
             log = true;
             path = [
               pkgs.nfs-utils
               pkgs.mount
             ];
+            runlevels = "12345789";
           };
         }
         # {
@@ -94,44 +123,47 @@ in
             # type = "forking";
             description = "rpcbind daemon for nfs client";
             command = "${pkgs.rpcbind}/bin/rpcbind";
-            # conditions = "service/syslogd/ready";
             # conditions = "net/eth0/running";
+            # conditions = "run/iproute2-static/success";
             log = true;
             path = [ pkgs.rpcbind ];
+            runlevels = "12345789";
           };
         }
         {
           nfs-rpc-idmapd = {
             description = "rpc.idmapd daemon for nfs client";
             command = "${pkgs.nfs-utils}/bin/rpc.idmapd -C";
-            conditions = "task/nfs-rpc-nfsd/success";
+            conditions = "run/nfs-rpc-nfsd/success";
             log = true;
             path = [ pkgs.nfs-utils ];
+            runlevels = "12345789";
           };
         }
       ];
 
       services = lib.mkMerge [
-        (lib.attrsets.mapAttrs' (
-          n: _:
-          lib.attrsets.nameValuePair "nfs-mount-${lib.lists.last (lib.strings.split "/" "${n}")}" {
-            description = "nfs mounting task for ${n}";
-            command = pkgs.writeShellScript "nfs-mount-${lib.lists.last (lib.strings.split "/" "${n}")}" ''
-              while [ "$(ip a show dev eth0 down)" != "" ]; do continue; done;
-              mount -t nfs ${n} && sleep infinity
-            '';
-            post = "\"umount ${n}\"";
-            # conditions = "task/nfs-timer/success";
-            # conditions = "net/eth0/running";
-            conditions = "task/iproute2-static/success";
-            log = false;
-            path = [
-              pkgs.nfs-utils
-              pkgs.mount
-              config.programs.coreutils.package
-            ];
-          }
-        ) (lib.attrsets.filterAttrs (_: v: v.fsType == "nfs") config.fileSystems))
+        # (lib.attrsets.mapAttrs' (
+        #   n: _:
+        #   lib.attrsets.nameValuePair "nfs-mount-${lib.lists.last (lib.strings.split "/" "${n}")}" {
+        #     description = "nfs mounting task for ${n}";
+        #     command = pkgs.writeShellScript "nfs-mount-${lib.lists.last (lib.strings.split "/" "${n}")}" ''
+        #       while [ "$(ip a show dev eth0 down)" != "" ]; do continue; done;
+        #       mount -t nfs ${n} && sleep infinity
+        #     '';
+        #     post = "\"umount ${n}\"";
+        #     # conditions = "task/nfs-timer/success";
+        #     # conditions = "net/eth0/running";
+        #     conditions = "task/iproute2-static/success";
+        #     log = false;
+        #     runlevel = "12345789";
+        #     path = [
+        #       pkgs.nfs-utils
+        #       pkgs.mount
+        #       config.programs.coreutils.package
+        #     ];
+        #   }
+        # ) (lib.attrsets.filterAttrs (_: v: v.fsType == "nfs") config.fileSystems))
 
         {
           nfs-rpc-statd = {
@@ -139,9 +171,10 @@ in
             pid = "/run/rpc.statd.pid";
             description = "rpc.statd daemon for nfs client";
             command = "${pkgs.nfs-utils}/bin/rpc.statd --no-notify";
-            conditions = "task/nfs-rpcbind/success";
+            conditions = "run/nfs-rpcbind/success";
             log = true;
             path = [ pkgs.nfs-utils ];
+            runlevels = "12345789";
           };
         }
       ];
