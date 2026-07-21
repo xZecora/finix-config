@@ -85,11 +85,11 @@
     },
     "community-local": {
       "locked": {
-        "lastModified": 1784153781,
-        "narHash": "sha256-DIEjUX8cXrFckUfS506vju9HnfiM6/G6YdCGj47qeME=",
-        "ref": "refs/heads/dinit-turnstiled",
-        "rev": "1bef8b651b58effff7de250942945ebc817da897",
-        "revCount": 70,
+        "lastModified": 1784526098,
+        "narHash": "sha256-+RoQQTu+t4OTglnXxPlz1LZj/M3NEOJ1rTDjSui+BpY=",
+        "ref": "refs/heads/hjem/dinit",
+        "rev": "6b640fe15bb250b51f8d7ad78eaafc7e37b3ce11",
+        "revCount": 66,
         "type": "git",
         "url": "file:///home/vitrial/.local/src/nix/community-modules"
       },
@@ -100,17 +100,18 @@
     },
     "finix": {
       "locked": {
-        "lastModified": 1784070678,
-        "narHash": "sha256-5KP4iyxGvHX78uMuBQ4jRnimMAm12KrLu8Djs5hPl44=",
-        "ref": "refs/heads/main",
-        "rev": "6adaaf78ca90865c6c3b8838b5e29f9d771d83b8",
-        "revCount": 638,
-        "type": "git",
-        "url": "file:///home/vitrial/.local/src/nix/finix"
+        "lastModified": 1784592714,
+        "narHash": "sha256-hx19ozIcDwvR5Wz/3olrljQTUCltxENeuggL0CAQhr8=",
+        "owner": "finix-community",
+        "repo": "finix",
+        "rev": "6a8dc9a25bb65cdbb4ddecc00f930dc8a1fa6861",
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///home/vitrial/.local/src/nix/finix"
+        "owner": "finix-community",
+        "ref": "pull/166/head",
+        "repo": "finix",
+        "type": "github"
       }
     },
     "finix-local": {

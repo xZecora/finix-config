@@ -8,8 +8,8 @@
     nixpkgs.url = "github:nixos/nixpkgs/ee8b23cf07c1d80f28656c20222d2c29aa44f06d";
 
     # Finix inputs #
-    # finix.url = "github:finix-community/finix";
-    finix.url = "git+file:///home/vitrial/.local/src/nix/finix";
+    finix.url = "github:finix-community/finix/pull/166/head";
+    # finix.url = "git+file:///home/vitrial/.local/src/nix/finix";
     # finix.url = "github:finix-community/finix/intrd";
     finix-local.url = "git+file:///home/vitrial/.local/src/nix/finix";
     # community.url = "github:finix-community/community-modules/turnstiled";
