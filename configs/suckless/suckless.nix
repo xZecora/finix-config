@@ -12,6 +12,7 @@
 
       patches = [ ./config/nix-dmenu.diff ];
     }))
+
     (pkgs.st.overrideAttrs (_: {
       src = pkgs.fetchgit {
         url = "https://github.com/bakkeby/st-flexipatch";
@@ -25,14 +26,19 @@
         libxft
       ];
     }))
-    # (pkgs.surf.overrideAttrs (_: {
-    #   src = pkgs.fetchgit {
-    #     url = "https://github.com/bakkeby/surf-flexipatch";
-    #     rev = "f8c70da1cea810d584d533ff2e56fcd14b0438a2";
-    #     sha256 = "sha256-bK8PxuH+FBM/WNlVeRY44tKOiMcfTQfT2g6zayLdJCE=";
-    #   };
-    #
-    #   patches = [ ./config/nix-surf-flexipatch.diff ];
-    # }))
+
+    (pkgs.surf.overrideAttrs (
+      _: prev: {
+        src = pkgs.fetchgit {
+          url = "https://github.com/bakkeby/surf-flexipatch";
+          rev = "f8c70da1cea810d584d533ff2e56fcd14b0438a2";
+          sha256 = "sha256-wie1rXFYpCVzeifjYEIUxBGsCgQMWLNgWUMrsVs4pHA=";
+        };
+
+        patches = [ ./config/nix-surf-flexipatch.diff ];
+
+        buildInputs = prev.buildInputs ++ [ pkgs.xdg-utils ];
+      }
+    ))
   ];
 }

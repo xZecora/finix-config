@@ -1,4 +1,9 @@
-{ pkgs, ... }:
+{
+  pkgs,
+  config,
+  lib,
+  ...
+}:
 let
   packageToPlugin = pkg: pkg.src;
 in
@@ -205,7 +210,7 @@ in
 
           pretty_path = ''
             # by default, Fish shell does not print ~ for $HOME
-            echo (pwd | sed "s|^$HOME|~|g" | path basename)
+            echo (pwd | ${lib.getExe' config.programs.coreutils.package "sed"} "s|^$HOME|~|g" | path basename)
           '';
 
           fish_mode_prompt = "";

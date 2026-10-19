@@ -17,156 +17,178 @@
     "usb_storage"
     "usbhid"
     "sd_mod"
+    "r8125"
   ];
-  boot.initrd.kernelModules = [ ];
-  boot.kernelModules = [ "kvm-amd" ];
-  boot.extraModulePackages = [ ];
+  boot.initrd.kernelModules = [
+    # "r8125"
+  ];
+  boot.kernelModules = [
+    "amdgpu"
+    # "r8125"
+  ];
+  boot.extraModulePackages = with config.boot.kernelPackages; [
+    r8125
+  ];
+
+  environment.etc."modprobe.d/blacklist.conf".text = "blacklist r8169";
 
   hardware.firmware = with pkgs; [ linux-firmware ];
 
-  fileSystems."/" = {
-    device = "zroot/finix";
-    fsType = "zfs";
-  };
-
-  fileSystems."/etc" = {
-    device = "zroot/etc";
-    fsType = "zfs";
-  };
-
-  fileSystems."/nix" = {
-    device = "zroot/nix";
-    fsType = "zfs";
-  };
-
-  fileSystems."/var" = {
-    device = "zroot/var";
-    fsType = "zfs";
-  };
-
-  fileSystems."/home" = {
-    device = "zroot/home";
-    fsType = "zfs";
-  };
-
-  fileSystems."/boot" = {
-    device = "/dev/disk/by-uuid/A554-6F04";
-    fsType = "vfat";
-    options = [
-      "fmask=0022"
-      "dmask=0022"
-    ];
-  };
+  # programs.modprobe.extraConfig = ''
+  #   options r8125 aspm=0
+  # '';
 
   fileSystems = {
-    "/server/alt_anime" = {
-      device = "192.168.0.231:/export/alt_anime";
-      fsType = "nfs";
-      options = [
-        "defaults"
-        "_netdev"
-        "hard"
-        # "noauto"
-      ];
+    "/" = {
+      device = "zroot/finix";
+      fsType = "zfs";
     };
 
-    "/server/anime" = {
-      device = "192.168.0.231:/export/anime";
-      fsType = "nfs";
-      options = [
-        "defaults"
-        "_netdev"
-        "hard"
-        # "noauto"
-      ];
+    "/etc" = {
+      device = "zroot/etc";
+      fsType = "zfs";
     };
 
-    "/server/audiobooks" = {
-      device = "192.168.0.231:/audiobooks";
-      fsType = "nfs";
-      options = [
-        "defaults"
-        "_netdev"
-        "hard"
-        # "noauto"
-      ];
+    "/nix" = {
+      device = "zroot/nix";
+      fsType = "zfs";
     };
 
-    "/server/books" = {
-      device = "192.168.0.231:/export/books";
-      fsType = "nfs";
-      options = [
-        "defaults"
-        "_netdev"
-        "hard"
-        # "noauto"
-      ];
+    "/var" = {
+      device = "zroot/var";
+      fsType = "zfs";
     };
 
-    "/server/downloads" = {
-      device = "192.168.0.231:/export/downloads";
-      fsType = "nfs";
-      options = [
-        "defaults"
-        "_netdev"
-        "hard"
-        # "noauto"
-      ];
+    "/home" = {
+      device = "zroot/home";
+      fsType = "zfs";
     };
 
-    "/server/lightnovels" = {
-      device = "192.168.0.231:/export/lightnovels";
-      fsType = "nfs";
+    "/boot" = {
+      device = "/dev/disk/by-uuid/A554-6F04";
+      fsType = "vfat";
       options = [
-        "defaults"
-        "_netdev"
-        "hard"
-        # "noauto"
-      ];
-    };
-
-    "/server/manga" = {
-      device = "192.168.0.231:/export/manga";
-      fsType = "nfs";
-      options = [
-        "defaults"
-        "_netdev"
-        "hard"
-        # "noauto"
-      ];
-    };
-
-    "/server/movies" = {
-      device = "192.168.0.231:/export/movies";
-      fsType = "nfs";
-      options = [
-        "defaults"
-        "_netdev"
-        "hard"
-        # "noauto"
-      ];
-    };
-
-    "/server/music" = {
-      device = "192.168.0.231:/export/music";
-      fsType = "nfs";
-      options = [
-        "defaults"
-        "_netdev"
-        "hard"
-        # "noauto"
-      ];
-    };
-
-    "/server/shows" = {
-      device = "192.168.0.231:/export/shows";
-      fsType = "nfs";
-      options = [
-        "defaults"
-        "_netdev"
-        "hard"
-        # "noauto"
+        "fmask=0022"
+        "dmask=0022"
       ];
     };
   };
+
+  # fileSystems."/mnt" = {
+  #   device = "/dev/disk/by-uuid/bbac5d2f-3a7b-4230-947e-608d178a23c1";
+  #   fsType = "ext4";
+  #   # neededForBoot = true;
+  # };
+
+  # fileSystems = {
+  #   "/server/alt_anime" = {
+  #     device = "192.168.0.231:/export/alt_anime";
+  #     fsType = "nfs";
+  #     options = [
+  #       "defaults"
+  #       "_netdev"
+  #       "hard"
+  #       "noauto"
+  #     ];
+  #   };
+  #
+  #   "/server/anime" = {
+  #     device = "192.168.0.231:/export/anime";
+  #     fsType = "nfs";
+  #     options = [
+  #       "defaults"
+  #       "_netdev"
+  #       "hard"
+  #       "noauto"
+  #     ];
+  #   };
+  #
+  #   "/server/audiobooks" = {
+  #     device = "192.168.0.231:/audiobooks";
+  #     fsType = "nfs";
+  #     options = [
+  #       "defaults"
+  #       "_netdev"
+  #       "hard"
+  #       "noauto"
+  #     ];
+  #   };
+  #
+  #   "/server/books" = {
+  #     device = "192.168.0.231:/export/books";
+  #     fsType = "nfs";
+  #     options = [
+  #       "defaults"
+  #       "_netdev"
+  #       "hard"
+  #       "noauto"
+  #     ];
+  #   };
+  #
+  #   "/server/downloads" = {
+  #     device = "192.168.0.231:/export/downloads";
+  #     fsType = "nfs";
+  #     options = [
+  #       "defaults"
+  #       "_netdev"
+  #       "hard"
+  #       "noauto"
+  #     ];
+  #   };
+  #
+  #   "/server/lightnovels" = {
+  #     device = "192.168.0.231:/export/lightnovels";
+  #     fsType = "nfs";
+  #     options = [
+  #       "defaults"
+  #       "_netdev"
+  #       "hard"
+  #       "noauto"
+  #     ];
+  #   };
+  #
+  #   "/server/manga" = {
+  #     device = "192.168.0.231:/export/manga";
+  #     fsType = "nfs";
+  #     options = [
+  #       "defaults"
+  #       "_netdev"
+  #       "hard"
+  #       "noauto"
+  #     ];
+  #   };
+  #
+  #   "/server/movies" = {
+  #     device = "192.168.0.231:/export/movies";
+  #     fsType = "nfs";
+  #     options = [
+  #       "defaults"
+  #       "_netdev"
+  #       "hard"
+  #       "noauto"
+  #     ];
+  #   };
+  #
+  #   "/server/music" = {
+  #     device = "192.168.0.231:/export/music";
+  #     fsType = "nfs";
+  #     options = [
+  #       "defaults"
+  #       "_netdev"
+  #       "hard"
+  #       "noauto"
+  #     ];
+  #   };
+  #
+  #   "/server/shows" = {
+  #     device = "192.168.0.231:/export/shows";
+  #     fsType = "nfs";
+  #     options = [
+  #       "defaults"
+  #       "_netdev"
+  #       "hard"
+  #       "noauto"
+  #     ];
+  #   };
+  # };
 }

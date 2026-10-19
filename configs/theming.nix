@@ -1,14 +1,5 @@
 { pkgs, ... }:
 {
-  # nixpkgs.config.qt6 = {
-  #   enable = true;
-  #   platformTheme = "qt6ct";
-  #   style = {
-  #     package = pkgs.utterly-nord-plasma;
-  #     name = "Utterly Nord Plasma";
-  #   };
-  # };
-
   security.pam.environment = {
     QT_QPA_PLATFORMTHEME.default = "qt6ct";
   };
@@ -20,7 +11,10 @@
     kdePackages.breeze
     kdePackages.breeze-icons
     everforest-cursors
-    everforest-gtk-theme
+    gruvbox-dark-gtk
+    gruvbox-kvantum
+    gruvbox-plus-icons
+    gruvbox-dark-icons-gtk
     lxappearance
   ];
 

@@ -10,6 +10,13 @@
     ./autocmds.nix
   ];
 
+  environment.systemPackages = with pkgs; [
+    (texliveMedium.withPackages (ps: [
+      ps.latexmk
+    ]))
+    zathura
+  ];
+
   programs.nvf = {
     enable = true;
 
@@ -42,7 +49,7 @@
         };
 
         # Build fix
-        diagnostics.presets.cpplint.enable = lib.mkForce false;
+        # diagnostics.presets.cpplint.enable = lib.mkForce false;
 
         clipboard = {
           enable = true;
@@ -145,6 +152,7 @@
           enableExtraDiagnostics = true;
           enableDAP = true;
 
+          # Languages I use
           nix = {
             enable = true;
             format.type = [ "nixfmt" ];
@@ -161,21 +169,28 @@
             lsp.servers = [ "clangd" ];
             format.type = [ "indent" ];
           };
-          tex.enable = true;
-          python.enable = true;
-          lua.enable = true;
-          sql.enable = true;
-          json.enable = true;
-          zig.enable = true;
 
-          typescript.enable = true;
-          csharp.enable = true;
+          tex.enable = true;
+
+          # Languages I might actually use
+          go.enable = false;
+          python.enable = false;
+          zig.enable = false;
+
+          # Languages I might begrudingly use
+          lua.enable = false;
+          sql.enable = false;
+          json.enable = false;
+
+          # Languages I won't use unless I have to
+          typescript.enable = false;
+          csharp.enable = false;
         };
 
         visuals = {
           nvim-scrollbar.enable = false;
           nvim-web-devicons.enable = true;
-          nvim-cursorline.enable = true;
+          nvim-cursorline.enable = false;
           cinnamon-nvim.enable = false;
           fidget-nvim.enable = false;
           rainbow-delimiters.enable = true;
@@ -188,47 +203,51 @@
         statusline = {
           lualine = {
             enable = true;
-            activeSection = {
-              a = [
-                ''{ "mode", icons_enabled = true, separator = { left = '▎', right = "" }, } ''
-                ''{ "", draw_empty = true, separator = { left = "", right = "" } } ''
-              ];
-              b = [
-                ''
-                  { "diff", colored = true, 
-                  												diff_color = { -- Same color values as the general color option can be used here.
-                  													added = 'DiffAdd', -- Changes the diff's added color 
-                  													modified = 'DiffChange', -- Changes the diff's modified color
-                  													removed = 'DiffDelete',}, -- Changes the diff's removed color you 
-                  												symbols = {added = '+', modified = ' ~', removed = ' -'}, -- Changes the diff symbols
-                  												separator = {right = ""} } ''
-              ];
-              c = [
-                ''{ "filetype", colored = true, icon_only = true, icon = { align = 'right' } } ''
-                ''{ "filename", symbols = {modified = '[+]', readonly = '[/]'}, separator = {right = ""} } ''
-                ''{ "", draw_empty = true, separator = { left = "", right = "" } } ''
-              ];
-              x = [
-                ''
-                  { -- Lsp server name
-                  											 function() local buf_ft = vim.bo.filetype local excluded_buf_ft = { toggleterm = true, NvimTree = true, ["neo-tree"] = true, TelescopePrompt = true } if excluded_buf_ft[buf_ft] then return "" end local bufnr = vim.api.nvim_get_current_buf() local clients = vim.lsp.get_clients({ bufnr = bufnr }) if vim.tbl_isempty(clients) then return "No Active LSP" end local active_clients = {} for _, client in ipairs(clients) do table.insert(active_clients, client.name) end return table.concat(active_clients, ", ") end, icon = '語', separator = {left = ""}, } ''
-                ''
-                  { "diagnostics", sources = {'nvim_lsp', 'nvim_diagnostic', 'nvim_diagnostic', 'vim_lsp', 'coc'}, symbols = {error = '󰅙 ', warn = ' ', info = ' ', hint = '󰌵 '}, colored = true, update_in_insert = false, always_visible = false, diagnostics_color = { color_error = { fg = 'red' }, color_warn = { fg = 'yellow' }, color_info = { fg = 'cyan' }, }, 
-                  											} ''
-              ];
-              y = [
-                ''{ "", draw_empty = true, separator = { left = "", right = "" } } ''
-                ''{ 'searchcount', maxcount = 999, timeout = 120, separator = {left = ""} } ''
-                ''{ "branch", icon = ' •', separator = {left = ""} } ''
-              ];
-              z = [
-                ''{ "", draw_empty = true, separator = { left = "", right = "" } } ''
-                ''{ "progress", separator = {left = ""} } ''
-                ''{"location"} ''
-                ''{ "fileformat", color = {fg='#282828'}, symbols = { unix = '' } } ''
-              ];
+            setupOpts.sections = {
+              # lualine_a = [
+              #   ''{ "mode", icons_enabled = true, separator = { left = '▎', right = "" }, } ''
+              #   ''{ "", draw_empty = true, separator = { left = "", right = "" } } ''
+              # ];
+              # lualine_b = [
+              #   ''
+              #     { "diff", colored = true,
+              #     												diff_color = { -- Same color values as the general color option can be used here.
+              #     													added = 'DiffAdd', -- Changes the diff's added color
+              #     													modified = 'DiffChange', -- Changes the diff's modified color
+              #     													removed = 'DiffDelete',}, -- Changes the diff's removed color you
+              #     												symbols = {added = '+', modified = ' ~', removed = ' -'}, -- Changes the diff symbols
+              #     												separator = {right = ""} } ''
+              # ];
+              # lualine_c = [
+              #   ''{ "filetype", colored = true, icon_only = true, icon = { align = 'right' } } ''
+              #   ''{ "filename", symbols = {modified = '[+]', readonly = '[/]'}, separator = {right = ""} } ''
+              #   ''{ "", draw_empty = true, separator = { left = "", right = "" } } ''
+              # ];
+              # lualine_x = [
+              #   ''
+              #     { -- Lsp server name
+              #     											 function() local buf_ft = vim.bo.filetype local excluded_buf_ft = { toggleterm = true, NvimTree = true, ["neo-tree"] = true, TelescopePrompt = true } if excluded_buf_ft[buf_ft] then return "" end local bufnr = vim.api.nvim_get_current_buf() local clients = vim.lsp.get_clients({ bufnr = bufnr }) if vim.tbl_isempty(clients) then return "No Active LSP" end local active_clients = {} for _, client in ipairs(clients) do table.insert(active_clients, client.name) end return table.concat(active_clients, ", ") end, icon = '語', separator = {left = ""}, } ''
+              #   ''
+              #     { "diagnostics", sources = {'nvim_lsp', 'nvim_diagnostic', 'nvim_diagnostic', 'vim_lsp', 'coc'}, symbols = {error = '󰅙 ', warn = ' ', info = ' ', hint = '󰌵 '}, colored = true, update_in_insert = false, always_visible = false, diagnostics_color = { color_error = { fg = 'red' }, color_warn = { fg = 'yellow' }, color_info = { fg = 'cyan' }, },
+              #     											} ''
+              # ];
+              # lualine_y = [
+              #   ''{ "", draw_empty = true, separator = { left = "", right = "" } } ''
+              #   ''{ 'searchcount', maxcount = 999, timeout = 120, separator = {left = ""} } ''
+              #   ''{ "branch", icon = ' •', separator = {left = ""} } ''
+              # ];
+              # lualine_z = [
+              #   ''{ "", draw_empty = true, separator = { left = "", right = "" } } ''
+              #   ''{ "progress", separator = {left = ""} } ''
+              #   ''{"location"} ''
+              #   ''{ "fileformat", color = {fg='#282828'}, symbols = { unix = '' } } ''
+              # ];
             };
             theme = "gruvbox";
+            integrations.breadcrumbs = {
+              nvim-navic.enable = true;
+              navbuddy.enable = true;
+            };
           };
         };
 
@@ -400,7 +419,6 @@
 
         minimap = {
           minimap-vim.enable = false;
-          codewindow.enable = false; # TODO want but broken
         };
 
         dashboard = {
@@ -461,7 +479,7 @@
           icon-picker.enable = false;
           surround.enable = true;
           leetcode-nvim.enable = false;
-          multicursors.enable = true;
+          multicursors.enable = false;
           smart-splits.enable = false;
           undotree.enable = false;
           nvim-biscuits.enable = true; # TODO want but broken
@@ -480,7 +498,7 @@
         };
 
         notes = {
-          neorg.enable = true;
+          neorg.enable = false;
           orgmode.enable = false;
           todo-comments.enable = false;
           obsidian = {
@@ -507,12 +525,12 @@
           };
           noice.enable = false;
           colorizer.enable = false;
-          modes-nvim.enable = true;
+          modes-nvim.enable = false;
           illuminate.enable = false;
-          breadcrumbs = {
-            enable = false;
-            navbuddy.enable = true;
-          };
+          # breadcrumbs = {
+          #   enable = false;
+          #   navbuddy.enable = true;
+          # };
           smartcolumn.enable = false;
           fastaction.enable = true;
         };

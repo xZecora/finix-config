@@ -3,17 +3,21 @@
 
   inputs = {
     # Nixpkgs input #
-    # nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     # change this ASAP
-    nixpkgs.url = "github:nixos/nixpkgs/ee8b23cf07c1d80f28656c20222d2c29aa44f06d";
+    # nixpkgs.url = "github:nixos/nixpkgs/ee8b23cf07c1d80f28656c20222d2c29aa44f06d";
+    # nixpkgs.url = "git+file:///home/vitrial/.local/src/nix/nixpkgs";
 
     # Finix inputs #
-    finix.url = "github:finix-community/finix/pull/166/head";
+    finix.url = "github:finix-community/finix";
+    # finix.url = "github:parzivale/finix/generic-services";
+    # finix.url = "github:FixeQD/finix/d83589c";
     # finix.url = "git+file:///home/vitrial/.local/src/nix/finix";
-    # finix.url = "github:finix-community/finix/intrd";
+    # finix.url = "git+file:///home/vitrial/.local/src/nix/finix?ref=autofs";
     finix-local.url = "git+file:///home/vitrial/.local/src/nix/finix";
-    # community.url = "github:finix-community/community-modules/turnstiled";
-    community.url = "git+file:///home/vitrial/.local/src/nix/cmUpstream";
+    finix-autofs.url = "git+file:///home/vitrial/.local/src/nix/finix?ref=autofs";
+    community.url = "github:finix-community/community-modules";
+    # community.url = "git+file:///home/vitrial/.local/src/nix/cmUpstream";
     community-local.url = "git+file:///home/vitrial/.local/src/nix/community-modules";
 
     # Module inputs #
@@ -26,10 +30,26 @@
       url = "github:snugnug/hjem-rum";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    stylix = {
-      url = "github:nix-community/stylix";
-      inputs.nixpkgs.follows = "nixpkgs";
+
+    rust-overlay.url = "github:oxalica/rust-overlay";
+
+    sessiond = {
+      url = "git+https://tangled.org/r0chd.pl/sessiond";
+      inputs.rust-overlay.follows = "rust-overlay";
     };
+    sessiond-uaccess = {
+      url = "git+https://tangled.org/r0chd.pl/sessiond-uaccess";
+      inputs.rust-overlay.follows = "rust-overlay";
+    };
+    sessiond-hooks = {
+      url = "git+https://tangled.org/r0chd.pl/sessiond-hooks";
+      inputs.rust-overlay.follows = "rust-overlay";
+    };
+
+    millennium.url = "github:SteamClientHomebrew/Millennium?dir=packages/nix";
+
+    concord.url = "github:chojs23/concord";
+    # oxicord.url = "github:linuxmobile/oxicord";
   };
 
   outputs =
@@ -38,23 +58,35 @@
       nixpkgs,
       finix,
       finix-local,
+      finix-autofs,
       nvf,
       hjem,
       hjem-rum,
       community,
       community-local,
-      stylix,
+      concord,
+      # oxicord,
       ...
     }:
     let
       pkgs = import nixpkgs {
         system = "x86_64-linux";
         config.allowUnfree = true;
-        # overlays = [
-        #   (final: prev: { pipewire = (pkgs.callPackage ./packages/pipewire/package.nix { }); })
-        # ];
+        overlays = [
+          # (final: prev: { pipewire = (pkgs.callPackage ./packages/pipewire/package.nix { }); })
+          inputs.millennium.overlays.default
+          (final: prev: {
+            inherit (prev.lixPackageSets.stable)
+              nixpkgs-review
+              nix-eval-jobs
+              nix-fast-build
+              colmena
+              ;
+          })
+        ];
       };
       flModules = finix-local.nixosModules;
+      autofs = finix-autofs.nixosModules;
       clModules = community-local.nixosModules;
       cModules = community.nixosModules;
     in
@@ -77,12 +109,18 @@
           doas
           xserver
           zfs
+          polkit
           # fish
 
           acpid
+          chronyd
 
           pipewire
           wireplumber
+
+          gamemode
+
+          autofs.autofs
 
           # nvf env variables stub
           # ./modules/environment
@@ -100,9 +138,11 @@
           }
 
           # Experimental #
-          cModules.turnstile
+          clModules.turnstile
+          # cModules.bootchart
+
           # ./modules/gamemode
-          ./modules/console.nix
+          # ./modules/console.nix
 
           ./modules/network.nix
 

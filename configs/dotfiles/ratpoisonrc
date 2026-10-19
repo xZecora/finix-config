@@ -78,7 +78,8 @@ bind C-R restart
 bind C-F curfram
 bind d exec menu.sh
 bind D exec powermenu.sh
-bind v exec vesktop
+#bind v exec vesktop
+bind v exec kitty concord
 bind s hsplit
 bind S split
 bind f exec floorp
@@ -150,6 +151,8 @@ exec rpws init 10 -k
 exec xset -dpms
 exec xset s 0 0
 exec /home/vitrial/.local/bin/idle.sh
+
+exec dinitctl setenv DISPLAY=$DISPLAY
 
 # exec mpd-mpris &
 # exec playerctld &

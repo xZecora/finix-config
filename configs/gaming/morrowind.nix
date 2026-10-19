@@ -7,7 +7,7 @@
         owner = "OpenMW";
         repo = "openmw";
         tag = "openmw-${finalAttrs.version}";
-        hash = "sha256-mPwNyKKqPSZJtcIyx3IhLe3iHOpx6p4+l1wJZqyDMqg=";
+        hash = "sha256-D+2nEQRkAjmDvRoas9bYPmdygQYT3MAv46n73OonE0o=";
       };
     }))
   ];

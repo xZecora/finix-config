@@ -45,12 +45,24 @@ in
     finit.tasks = {
       iproute2-static = {
         description = "static network configuration service";
-        command = pkgs.writeShellScript "static-network" ''
-          ip link set ${cfg.interface} up
-          ip address add ${cfg.localInfo} dev ${cfg.interface}
-          ip route add ${cfg.routerIP} dev ${cfg.interface}
-          ip route add default via ${cfg.routerIP} dev ${cfg.interface}
-        '';
+        # command = pkgs.writeShellScript "static-network" ''
+        #   ip -4 link set ${cfg.interface} up
+        #   ip -4 address add ${cfg.localInfo} dev ${cfg.interface}
+        #   ip -4 route add ${cfg.routerIP} dev ${cfg.interface}
+        #   ip -4 route add default via ${cfg.routerIP} dev ${cfg.interface}
+        # '';
+        command = pkgs.writeTextFile {
+          name = "static-network";
+          text = ''
+            #!${lib.getExe' pkgs.dash "dash"}
+            ip -4 link set ${cfg.interface} up
+            ip -4 address add ${cfg.localInfo} dev ${cfg.interface}
+            ip -4 route add ${cfg.routerIP} dev ${cfg.interface}
+            ip -4 route add default via ${cfg.routerIP} dev ${cfg.interface}
+          '';
+          executable = true;
+        };
+
         conditions = "net/${cfg.interface}/exist";
         log = true;
         runlevels = "12345789";

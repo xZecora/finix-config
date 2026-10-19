@@ -15,6 +15,7 @@
     {
       packages.x86_64-linux = {
         screenshot = pkgs.callPackage ./screenshot.nix { };
+        greek = pkgs.callPackage ./greek.nix { };
       };
     };
 }

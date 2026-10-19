@@ -23,7 +23,7 @@ in
     bin = {
       directory = lib.mkOption {
         type = lib.types.str;
-        default = "${cfg.directory}.local/bin/";
+        default = "${cfg.directory}/.local/bin/";
       };
       files = lib.mkOption {
         default = { };
@@ -40,8 +40,6 @@ in
           inherit (v) text source;
           target = ".local/bin/" + n;
         }
-        # lib.attrsets.filterAttrs (n: _: n != "source") v
-        # )
       ) cfg.bin.files)
     ];
   };

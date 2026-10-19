@@ -4,6 +4,13 @@
   ...
 }:
 {
+  environment.systemPackages = with pkgs; [
+    mpd
+    mpd-mpris
+    playerctl
+    mpc
+  ];
+
   hjem.users.vitrial = {
     xdg.config.files = {
       "mpd/mpd.conf".text = ''

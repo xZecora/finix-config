@@ -29,6 +29,12 @@ in
       restart = true;
       prepared-by = [ "pipewire-pulse" ];
     };
+    easyeffects = {
+      type = "process";
+      command = "${lib.getExe' pkgs.easyeffects "easyeffects"} --service-mode -w";
+      restart = true;
+      depends-on = [ "wireplumber" ];
+    };
 
     dbus-session = {
       type = "process";
@@ -110,6 +116,7 @@ in
               ];
             }
             ''
+              # TODO find a better way to get XDG_RUNTIME_DIR for each user. probably gonna involve patching turnstiles backends...
               export XDG_RUNTIME_DIR=/run/user/1000
 
               new_manifest="${newManifests}/manifest-vitrial.json"
